@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+#  This file is used to bootstrap a project, and may
+#  be invocated by the remote system or other scripts
+#
+#  Specific configuration for Docker bootstrapping
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $DIR/shared-functions
+
+# Load common bootstrap
+$DIR/bootstrap
+
+### ADD USER DATA HERE ###
+
+exit 0

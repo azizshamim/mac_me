@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+#  This file is used to build assets, and will
+#  be invocated by the remote system.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $DIR/shared-functions
+
+$DIR/bootstrap
+
+### ADD USER DATA HERE ###
+
+exit 0
