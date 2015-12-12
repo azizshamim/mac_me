@@ -7,14 +7,14 @@
 # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # source $DIR/shared-functions
 _root_dir() {
-  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../"
+  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
   echo $DIR
 }
 
 _source_dotenv() {
   DIR=$1
-  if [ -f $DIR/.env ]; then
-    source $DIR/.env
+  if [ -f ./$DIR/.env ]; then
+    source ./$DIR/.env
   fi
 }
 

@@ -9,4 +9,7 @@ Vagrant.configure(2) do |config|
   config.vm.provision "shell",
     inline: "/bin/sh /vagrant/script/bootstrap-vagrant"
 
+
+  ### ADD USER DATA HERE ###
+
 end
