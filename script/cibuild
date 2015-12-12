@@ -3,8 +3,10 @@
 #  This file is used to run CI, and will
 #  be invocated by the remote system.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source $DIR/shared-functions
+source $DIR/helpers
 
 ### PUT USER DATA HERE ###
+mix dogma
+mix test
 
 exit 0

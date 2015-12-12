@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+APP="mac_me"
+
+BUILD_HOST="windowcam.hq.fryman.io"
+BUILD_USER="jfryman"
+BUILD_AT="/tmp/elixir/mac_me/builds"
+
+PRODUCTION_HOSTS="windowcam.hq.fryman.io"
+PRODUCTION_USER="jfryman"
+DELIVER_TO="/opt/mac_me"
