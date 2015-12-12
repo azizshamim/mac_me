@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+#
+# Discovery
+#
+#  This file should contain all helper scripts focused
+#  on discovery of the local environment
+
+## Path ##
+_has_cmd() {
+  COMMAND=$1
+  command -v $COMMAND >/dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo "true"
+  else
+    echo "false"
+  fi
+}
+
+## OS ##
+_os() {
+  echo $(uname -s)
+}
+
+_rev() {
+  echo $(uname -r)
+}
+
+_mach() {
+  echo $(uname -m)
+}
+
+_arch() {
+  OS=$1
+  if [ "$OS" = "OpenBSD" ]; then
+    ARGS="arch -s"
+  fi
+
+  echo $(arch ${ARGS})
+}
+
+_os_dist() {
+  if [ $# -eq 0 ]; then
+    echo "Missing OS"
+  else
+    OS=$1
+
+    if [ -f /etc/redhat-release ]; then
+      DIST='RedHat'
+    elif [ -f /etc/debian_version ] ; then
+      DIST="Debian"
+    fi
+
+    echo $DIST
+  fi
+}
+
+_os_rev() {
+  DIST=$1
+
+  case $DIST in
+  RedHat)
+    REV=`cat /etc/redhat-release | sed s/.*release\ // | sed s/\ .*//`
+    ;;
+  Debian)
+    REV="`cat /etc/debian_version`"
+    ;;
+  *)
+    REV="unknown"
+    ;;
+  esac
+
+  echo $REV
+}
+
+_os_majorver() {
+  REV=$(_os_rev)
+  echo $(_majorver ${REV})
+}
+
+_os_codename() {
+	if [ -f /etc/debian_version ]; then
+    CODENAME=`/usr/bin/lsb_release -c -s`
+  else
+    CODENAME="unknown LSB release"
+	fi
+
+  echo $CODENAME
+}
+
+## Languages ##
+_has_ruby() {
+  echo $(_has_cmd ruby)
+}

@@ -11,6 +11,14 @@ an application within The Bikeshed and fryman.io Infrastructures.
 
 > Be one with the 12-factor app.
 
+## Requirements
+
+Yeah, yeah. Maybe one day this will have no external requirements. Until then,
+here is what you need at a minimum:
+
+* `git`
+* `ruby` (optional, deployments only)
+
 ## What it contains
 
 ### The Scaffolding

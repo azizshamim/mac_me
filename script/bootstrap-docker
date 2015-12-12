@@ -5,7 +5,7 @@
 #
 #  Specific configuration for Docker bootstrapping
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source $DIR/shared-functions
+source $DIR/helpers
 
 # Load common bootstrap
 $DIR/bootstrap
