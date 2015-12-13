@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+#  This file is used to deploy the application, and will
+#  be invocated by the orchestration system.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $DIR/helpers
+
+### ADD USER DATA HERE ###
+
+exit 0
