@@ -13,4 +13,6 @@ Who wrote this?
 
 ## Deployment
 
+script/deploy
+
 ## How to get help??
