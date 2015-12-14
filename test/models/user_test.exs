@@ -3,19 +3,14 @@ defmodule MacMe.UserTest do
 
   alias MacMe.User
 
-  test "valid attributes should be accepted" do
-    data = %{irc_username: Faker.Internet.user_name,
-             avatar_url: nil,
-             github_username: nil
-            }
-    changeset = User.changeset(%User{}, data)
-    assert changeset.valid?
-  end
+  @valid_attrs %{
+    irc_username: Faker.Internet.user_name,
+    github_username: Faker.Internet.user_name,
+    avatar_url: Faker.Internet.image_url,
+  }
 
-  test "a valid avatar_url should be accepted" do
-    data = %{irc_username: Faker.Internet.user_name,
-             avatar_url: Faker.Internet.image_url}
-    changeset = User.changeset(%User{}, data)
+  test "valid attributes should be accepted" do
+    changeset = User.changeset(%User{}, @valid_attrs)
     assert changeset.valid?
   end
 
@@ -24,5 +19,33 @@ defmodule MacMe.UserTest do
              avatar_url: 'notaurl'}
     changeset = User.changeset(%User{}, data)
     refute changeset.valid?
+  end
+
+  test "refute a duplicate irc_username" do
+    %User{}
+    |> User.changeset(@valid_attrs)
+    |> Repo.insert!
+
+    duplicate_user = %User{}
+    |> User.changeset(@valid_attrs)
+
+    assert {:error, changeset} = Repo.insert(duplicate_user)
+    assert changeset.errors[:irc_username] == "has already been taken"
+  end
+
+  test "refute a duplicate github_username" do
+    user = @valid_attrs
+    duplicate_user = user
+    |> Dict.put(:irc_username, Faker.Internet.user_name)
+
+    %User{}
+    |> User.changeset(user)
+    |> Repo.insert!
+
+    response = %User{}
+    |> User.changeset(duplicate_user)
+
+    assert {:error, changeset} = Repo.insert(response)
+    assert changeset.errors[:github_username] == "has already been taken"
   end
 end

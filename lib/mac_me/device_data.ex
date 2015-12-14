@@ -1,4 +1,12 @@
 defmodule MacMe.DeviceData do
+  @moduledoc """
+  This process provides a container to hold cached state of devices found.
+  DevicePoller will drop data into this process to hold state in the event
+  of failure of the poller.
+
+  Pretty standard GenServer public/private pattern. Used GenServer versus
+  Agents just to get a feel for things.
+  """
   use GenServer
 
   # Public API
@@ -14,7 +22,7 @@ defmodule MacMe.DeviceData do
     GenServer.call(pid, :get_state)
   end
 
-  ## GenServer API
+  # GenServer API
   def init(devices) do
     {:ok, devices}
   end

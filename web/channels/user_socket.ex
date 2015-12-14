@@ -1,10 +1,13 @@
 defmodule MacMe.UserSocket do
+  @moduledoc """
+  Automatically generated module to use Phoenix Sockets within application
+  """
   use Phoenix.Socket
 
-  ## Channels
+  # Channels
   # channel "rooms:*", MacMe.RoomChannel
 
-  ## Transports
+  # Transports
   transport :websocket, Phoenix.Transports.WebSocket
   # transport :longpoll, Phoenix.Transports.LongPoll
 
@@ -23,7 +26,8 @@ defmodule MacMe.UserSocket do
     {:ok, socket}
   end
 
-  # Socket id's are topics that allow you to identify all sockets for a given user:
+  # Socket id's are topics that allow you to identify all sockets for a
+  # given user:
   #
   #     def id(socket), do: "users_socket:#{socket.assigns.user_id}"
   #

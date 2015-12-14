@@ -1,6 +1,12 @@
-# Taken from http://dantswain.herokuapp.com/blog/2015/04/19/integration-testing-a-json-api-in-phoenix/
-# Thanks Dan!
 defmodule MacMe.Support.APICall do
+  @moduledoc """
+  Module used during dev, test, and prod to make internal calls to self
+  via the API. Automatically sends a command properly formatted and
+  targeted for the correct endpoint.
+
+  Shamelessly adapted Dan Swain's testing pattern. Thanks Dan!
+  http://bit.ly/1RLBr5q <- (Real, promise. Just hate lint errors!)
+  """
   use HTTPoison.Base
 
   def process_url(url) do

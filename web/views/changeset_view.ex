@@ -1,4 +1,7 @@
-defmodule MacMe.V1.ChangesetView do
+defmodule MacMe.ChangesetView do
+  @moduledoc """
+  Default rendering of viewing Changeset Errors
+  """
   use MacMe.Web, :view
 
   def render("error.json", %{changeset: changeset}) do

@@ -3,27 +3,46 @@ defmodule MacMe.DeviceTest do
 
   alias MacMe.Device
 
+  @valid_attrs %{
+    mac_address: "02:E6:50:42:F4:00",
+    name: "batphone",
+  }
+
+  @invalid_attrs %{
+    mac_address: "not_a_mac",
+  }
+
   test "an invalid mac addcess should not be accepted" do
-    data = %{mac_address: "not_a_mac"}
-    changeset = Device.changeset(%Device{}, data)
+    changeset = Device.changeset(%Device{}, @invalid_attrs)
     refute changeset.valid?
   end
 
   test "a valid mac address should be good to go" do
-    data = %{mac_address: "02:E6:50:42:F4:00"}
-    changeset = Device.changeset(%Device{}, data)
+    changeset = Device.changeset(%Device{}, @valid_attrs)
     assert changeset.valid?
   end
 
   test "will refuse MAC addresses without leading zeroes" do
-    data = %{mac_address: "2:E6:5:42:F4:0"}
+    data = Dict.put(@valid_attrs, :mac_address, "2:E6:5:42:F4:0")
     changeset = Device.changeset(%Device{}, data)
     refute changeset.valid?
   end
 
   test "will refuse lowercase MAC addresses" do
-    data = %{mac_address: "2:e6:5:42:f4:0"}
+    data = Dict.put(@valid_attrs, :mac_address, "2:e6:5:42:f4:0")
     changeset = Device.changeset(%Device{}, data)
     refute changeset.valid?
+  end
+
+  test "refute a duplicate device" do
+    %Device{}
+    |> Device.changeset(@valid_attrs)
+    |> Repo.insert!
+
+    duplicate_device = %Device{}
+    |> Device.changeset(@valid_attrs)
+
+    assert {:error, changeset} = Repo.insert(duplicate_device)
+    assert changeset.errors[:mac_address] == "has already been taken"
   end
 end

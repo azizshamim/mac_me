@@ -1,7 +1,12 @@
 defmodule MacMe.V1.UserController do
+  @moduledoc """
+  Main controller gathering all the data necessary for manipulating the
+  User model
+  """
   use MacMe.Web, :controller
 
   alias MacMe.User
+  alias MacMe.UserActions
 
   plug :scrub_params, "user" when action in [:create, :update]
 
@@ -11,13 +16,11 @@ defmodule MacMe.V1.UserController do
   end
 
   def create(conn, %{"user" => user_params}) do
-    changeset = User.changeset(%User{}, user_params)
-
-    case Repo.insert(changeset) do
+    case UserActions.register_new_user(user_params) do
       {:ok, user} ->
         conn
         |> put_status(:created)
-        |> put_resp_header("location", user_path(conn, :show, user))
+        |> put_resp_header("location", v1_user_path(conn, :show, user))
         |> render("show.json", user: user)
       {:error, changeset} ->
         conn
@@ -26,10 +29,10 @@ defmodule MacMe.V1.UserController do
     end
   end
 
-  def show(conn, %{"id" => id}) do
-    user = Repo.get!(User, id)
-    render(conn, "show.json", user: user)
-  end
+  # def show(conn, %{"id" => id}) do
+  #   user = Repo.get!(User, id)
+  #   render(conn, "show.json", user: user)
+  # end
 
   def update(conn, %{"id" => id, "user" => user_params}) do
     user = Repo.get!(User, id)
@@ -45,13 +48,13 @@ defmodule MacMe.V1.UserController do
     end
   end
 
-  def delete(conn, %{"id" => id}) do
-    user = Repo.get!(User, id)
+  # def delete(conn, %{"id" => id}) do
+  #   user = Repo.get!(User, id)
 
-    # Here we use delete! (with a bang) because we expect
-    # it to always work (and if it does not, it will raise).
-    Repo.delete!(user)
+  #   # Here we use delete! (with a bang) because we expect
+  #   # it to always work (and if it does not, it will raise).
+  #   Repo.delete!(user)
 
-    send_resp(conn, :no_content, "")
-  end
+  #   send_resp(conn, :no_content, "")
+  # end
 end

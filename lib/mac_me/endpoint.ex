@@ -1,4 +1,7 @@
 defmodule MacMe.Endpoint do
+  @moduledoc """
+  Here it is! This is the helper function used by Phoenix.
+  """
   use Phoenix.Endpoint, otp_app: :mac_me
 
   socket "/socket", MacMe.UserSocket

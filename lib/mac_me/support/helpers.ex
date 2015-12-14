@@ -1,4 +1,7 @@
 defmodule MacMe.Support.Helpers do
+  @moduledoc """
+  Shared functions that really don't have a better place to live yet
+  """
   def extract_mac(string) do
     string
     |> String.split(["\n", "\t"])

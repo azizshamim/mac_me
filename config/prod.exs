@@ -60,6 +60,8 @@ config :logger, level: :info
 # which should be versioned separately.
 import_config "prod.secret.exs"
 
+subnets = System.get_env("MACME_SUBNETS")
+
 config :mac_me, :device_poller, MacMe.DevicePoller.ArpPing
-config :mac_me, :scanned_subnets, System.get_env("MACME_SUBNETS") |> String.split(",")
+config :mac_me, :scanned_subnets, subnets |> String.split ","
 config :mac_me, :poll_interval, System.get_env("MACME_POLL_INTERVAL")

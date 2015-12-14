@@ -1,7 +1,11 @@
 defmodule MacMe.DevicePoller.FakeArpPing do
-  @arpPingOutput """
+  @moduledoc """
+  Stub module with test data from `arp-ping` to allow for testing
+  """
+  @behaviour MacMe.DevicePoller.Base
+
+  @arp_ping_output """
     Interface: en0, datalink type: EN10MB (Ethernet)
-    Starting arp-scan 1.9 with 256 hosts (http://www.nta-monitor.com/tools/arp-scan/)
     172.19.131.2	00:e0:4b:22:96:d9	JUMP INDUSTRIELLE COMPUTERTECHNIK GmbH
     172.19.131.94	58:7f:57:6b:be:e1	(Unknown)
     172.19.131.95	a4:db:30:e8:9a:a8	(Unknown)
@@ -21,10 +25,9 @@ defmodule MacMe.DevicePoller.FakeArpPing do
     172.19.131.144	34:12:98:aa:42:7e	(Unknown)
 
     529 packets received by filter, 0 packets dropped by kernel
-    Ending arp-scan 1.9: 256 hosts scanned in 1.834 seconds (139.59 hosts/sec). 17 responded
     """
 
   def run(_subnets) do
-    @arpPingOutput |> MacMe.Support.Helpers.extract_mac
+    @arp_ping_output |> MacMe.Support.Helpers.extract_mac
   end
 end

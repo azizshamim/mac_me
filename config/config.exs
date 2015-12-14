@@ -9,7 +9,8 @@ use Mix.Config
 config :mac_me, MacMe.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
-  secret_key_base: "tndr16dS7Hhk8+JJ0ca0+MaG0NXtaGe+L5CK0mjA6h6wBVojVUiosOpwTJTOGl8N",
+  secret_key_base:
+    "tndr16dS7Hhk8+JJ0ca0+MaG0NXtaGe+L5CK0mjA6h6wBVojVUiosOpwTJTOGl8N",
   render_errors: [accepts: ~w(json)],
   pubsub: [name: MacMe.PubSub,
            adapter: Phoenix.PubSub.PG2]

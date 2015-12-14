@@ -1,4 +1,7 @@
-defmodule MacMe.V1.ErrorView do
+defmodule MacMe.ErrorView do
+  @moduledoc """
+  Default views returned anytime we have some problems
+  """
   use MacMe.Web, :view
 
   def render("404.html", _assigns) do
