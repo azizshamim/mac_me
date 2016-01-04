@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+# main logger function
+#
+# @ logger <log-level> <message>
+logger() {
+    echo "[${1:?}] ${2:?}"
+}
+
+# info logger.
+#
+# @ info <message>
+verbose() {
+    if log-level-verbose;
+    then logger "info" "${1:?}"
+    fi
+}
+
+# default logger
+#
+# @ log <message>
+log() {
+    logger "log" "${1:?}"
+}
+
+# error logger
+#
+# @ error <message>
+error() {
+    logger "error" "${1:?}"
+}
+
+# debug logger
+#
+# @ debug <message>
+debug() {
+    if log-level-debug;
+    then logger "debug" "${1:?}"
+    fi
+}
+
+# bail out, put a big flashy message, and exit 1
+#
+# @ fail-loudly <message>
+fail-loudly() {
+    error "*******************************************************"
+    error "${1:?}"
+    error "*******************************************************"
+    exit 1
+}
+
+verbose-loudly() {
+    if log-level-verbose; then
+        verbose "*******************************************************"
+        verbose "${1:?}"
+        verbose "*******************************************************"
+    fi
+}
+
+user-log-level() {
+    local _check=
+
+    # Unset fail on unset variables
+    set +u
+
+    if [[ -z $LOG_LEVEL ]];
+    then _check=false;
+    else _check=true;
+    fi
+
+    # and then turn it back on for safety
+    set -u
+
+    # Reset the actual return value, since 'set -u'
+    # will return 'true' as well
+    $_check
+}
+
+check-env-log-level-debug() {
+    if string-equals "${LOG_LEVEL:-}" "debug";
+    then true;
+    else false;
+    fi
+}
+
+check-env-log-level-verbose() {
+    if string-equals "${LOG_LEVEL:-}" "verbose";
+    then true;
+    else false;
+    fi
+}
+
+# check to determine if the log level is set to info
+log-level-debug() {
+    if user-log-level;
+    then check-env-log-level-debug;
+    else false;
+    fi
+}
+
+log-level-verbose() {
+    if user-log-level;
+    then check-env-log-level-verbose;
+    else false;
+    fi
+}
+
+# return the logging file to dump output to
+#
+# @ log-file
+log-file() {
+    echo "/var/log/puppet.log"
+}
+
+# stub string to ensure output is piped through STDOUT and log file
+# use with 'eval' or 'execute-string'
+#
+# returns string
+#
+# @ send-all-output-to-log-file-and-stdout
+send-all-output-to-log-file-and-stdout() {
+    echo " 2>&1 | tee -a $(log-file)"
+}
+
+# stub string to ensure output is piped to log file
+# use with 'eval' or 'execute-string'
+#
+# returns string
+#
+# @ send-all-output-to-log-file
+send-all-output-to-log-file() {
+    echo " >> $(log-file) 2>&1"
+}

@@ -37,9 +37,5 @@ config :mac_me, :scanned_subnets, ['172.19.131.0/24']
 config :mac_me, :poll_interval, 10000
 
 config :mac_me, MacMe.Repo,
-  adapter: Ecto.Adapters.Postgres,
-  username: "postgres",
-  password: "postgres",
-  database: "mac_me_dev",
-  hostname: "localhost",
-  pool_size: 10
+  adapter: Sqlite.Ecto,
+  database: "local/mac_me_dev.sqlite3"

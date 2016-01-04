@@ -7,36 +7,54 @@
 # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # source $DIR/helpers
 
-_script_dir() {
-  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-  echo $DIR
+script-dir() {
+    local _dir=
+    _dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+    echo $_dir
 }
 
-_source_file() {
-  FILE=$1
-  if [ -f $FILE ]; then
-    source $FILE
-  fi
+file-exists() {
+    local _file=
+    _file="${1:?}"
+
+    if [ -f $_file ];
+    then true;
+    else false
+    fi
 }
 
-_source_dir() {
-  DIR=$1
-  for FILE in `find $DIR -type f`; do
-    _source_file $FILE
-  done
+source-file() {
+    local _file=
+    _file="${1:?}"
+
+    if file-exists $_file; then
+        source $_file
+    fi
 }
 
-## Main
-_helper_init() {
-  DIR=$1
+source-dir() {
+    local _dir=
+    _dir="${1:?}"
 
-  # Load up .env pattern
-  _source_file $DIR/.env
-
-  # Ensure that all helper functions are sourced
-  _source_dir $DIR/script/helpers.d
+    for file in $(files-in-dir $_dir); do
+        source-file $file
+    done
 }
 
-# Entry point -- Load up helpers
-ROOT_DIR=`cd $(_script_dir)/../ && pwd`
-_helper_init $ROOT_DIR
+files-in-dir() {
+    local _dir=
+    _dir="${1:?}"
+
+    echo $(find $_dir -type f)
+}
+
+init-helpers() {
+    local _root_dir=
+    _root_dir=`cd $(script-dir)/../ && pwd`
+
+    source-file $_root_dir/.env
+    source-dir $_root_dir/script/helpers.d
+}
+
+init-helpers

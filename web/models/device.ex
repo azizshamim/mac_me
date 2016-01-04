@@ -29,7 +29,6 @@ defmodule MacMe.Device do
     model
     |> cast(params, @required_fields, @optional_fields)
     |> validate_format(:mac_address, @mac_format)
-    |> unique_constraint(:mac_address)
   end
 end
 
@@ -59,6 +58,6 @@ defmodule MacMe.DeviceActions do
     device
     |> Device.changeset(device_params)
     |> Repo.update
-    |> Repo.preload([:users, [:devices]])
+    |> Repo.preload(:users)
   end
 end

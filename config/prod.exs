@@ -65,3 +65,9 @@ subnets = System.get_env("MACME_SUBNETS")
 config :mac_me, :device_poller, MacMe.DevicePoller.ArpPing
 config :mac_me, :scanned_subnets, subnets |> String.split ","
 config :mac_me, :poll_interval, System.get_env("MACME_POLL_INTERVAL")
+
+# Configure your database
+config :mac_me, MacMe.Repo,
+  adapter: Sqlite.Ecto,
+  database: "local/mac_me_prod.sqlite3"
+

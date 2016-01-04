@@ -11,6 +11,7 @@ defmodule MacMe.BackendSupervisor do
 
   @data_worker MacMe.DeviceData
   @poller_supervisor MacMe.DevicePollerSupervisor
+  @ldap_connection_supervisor MacMe.LDAP.ConnectionSupervisor
 
   def start_link do
     result = {:ok, supervisor_pid} = Supervisor.start_link(__MODULE__, :ok,

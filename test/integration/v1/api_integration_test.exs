@@ -69,11 +69,12 @@ defmodule MacMe.V1.ApiIntegrationTest do
       "user" => random_user,
     }
     created_user = APICall.post!("/users", create_user_payload)
+    user_data = created_user.body |> Poison.decode!
 
     registration_payload = %{
       registration: %{
         mac_address: "00:12:34:56:78:90",
-        irc_username: random_user.irc_username,
+        user: user_data["data"]["id"],
       }
     }
 

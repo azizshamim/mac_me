@@ -19,7 +19,7 @@ defmodule MacMe.Mixfile do
   # Type `mix help compile.app` for more information
   def application do
     [mod: {MacMe, []},
-     applications: [:phoenix, :cowboy, :logger, :phoenix_ecto, :postgrex,
+     applications: [:phoenix, :cowboy, :logger, :phoenix_ecto, :sqlite_ecto,
                     :httpoison]]
   end
 
@@ -33,7 +33,7 @@ defmodule MacMe.Mixfile do
   defp deps do
     [{:phoenix, "~> 1.0.2"},
      {:phoenix_ecto, "~> 1.1"},
-     {:postgrex, ">= 0.0.0"},
+     {:sqlite_ecto, "~> 1.0.2"},
      {:phoenix_html, "~> 2.1"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
      {:cowboy, "~> 1.0"},

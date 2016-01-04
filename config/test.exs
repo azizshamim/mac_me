@@ -12,15 +12,12 @@ config :logger, level: :warn
 # Set a higher stacktrace during test
 config :phoenix, :stacktrace_depth, 20
 
-# Configure your database
-config :mac_me, MacMe.Repo,
-  adapter: Ecto.Adapters.Postgres,
-  username: "postgres",
-  password: "postgres",
-  database: "mac_me_test",
-  hostname: "localhost",
-  pool: Ecto.Adapters.SQL.Sandbox
-
 config :mac_me, :device_poller, MacMe.DevicePoller.FakeArpPing
 config :mac_me, :scanned_subnets, ['172.19.131.0/24']
 config :mac_me, :poll_interval, 10000
+
+# Configure your database
+config :mac_me, MacMe.Repo,
+  adapter: Sqlite.Ecto,
+  database: "local/mac_me_test.sqlite3",
+  pool: Ecto.Adapters.SQL.Sandbox

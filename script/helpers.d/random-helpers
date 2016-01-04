@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+random-hex() {
+    local _numbers=
+    local _random=
+    _numbers="${1:8}"
+    _random="$(openssl rand -hex $_{numbers}"
+
+    echo "0x${_random}"
+}

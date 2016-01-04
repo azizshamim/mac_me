@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+random-tcp-port() {
+    echo $(awk 'BEGIN{srand();print int(rand()*(63000-2000))+2000 }')
+}
+
+random-available-tcp-port() {
+    local _port=
+    _port=$(random-tcp-port)
+
+    if network-tcp-port-available $_port;
+    then echo $_port
+    else echo $(random-available-tcp-port)
+    fi
+}
+
+# Is network port available?
+network-tcp-port-available() {
+    local _port=
+    local _netstat_args=
+    _port="${1:?}"
+
+    if os-is-osx;
+    then _netstat_args='-an'
+    elif os-is-linux
+    then _netstat_args='-ln'
+    else
+        error "OS NOT SUPPORTED!"
+        exit 1
+    fi
+
+    if $(netstat ${_netstat_args} | grep 'LISTEN' | grep 'tcp' | grep ':${_port}')
+    then false;
+    else true;
+    fi
+}

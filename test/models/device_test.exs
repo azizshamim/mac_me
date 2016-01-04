@@ -33,16 +33,4 @@ defmodule MacMe.DeviceTest do
     changeset = Device.changeset(%Device{}, data)
     refute changeset.valid?
   end
-
-  test "refute a duplicate device" do
-    %Device{}
-    |> Device.changeset(@valid_attrs)
-    |> Repo.insert!
-
-    duplicate_device = %Device{}
-    |> Device.changeset(@valid_attrs)
-
-    assert {:error, changeset} = Repo.insert(duplicate_device)
-    assert changeset.errors[:mac_address] == "has already been taken"
-  end
 end

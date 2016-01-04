@@ -1,0 +1,341 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+# sets up a test LDAP server. Returns a connection string
+#
+slapd-setup-test-server() {
+    local _port=
+    local _data_dir=
+    local _suffix=
+    local _rootdn=
+    local _server=
+    local _password=
+    local _ldap_server_pid=
+    local _ldap_data_dir=
+    local _ldap_server_host=
+    local _ldap_server_port=
+    _port=$(random-available-tcp-port)
+    _data_dir=$(random-tmpdir)
+    _suffix=$(slapd-server-test-suffix)
+    _rootdn=$(slapd-server-test-rootdn)
+    _password=$(slapd-server-test-password)
+    _host="localhost"
+    _server="${_host}:${_port}"
+    _server_uri="ldaps://${_server}"
+
+    # Bootstrap SSL Certificate
+    bootstrap-test-ssl $_data_dir
+
+    # Attempt to bootstrap a new OpenLDAP server, or get details
+    # about the current one running.
+    #
+    # _ldap_server_host and _ldap_server_port should be set
+    # to feed to the initial LDIF import
+    if process-running slapd;
+    then
+        _ldap_server_pid=$(lookup-pid slapd)
+        _ldap_data_dir=$(lookup-cwd-from-pid $_ldap_server_pid)
+        _ldap_server_host=$(slapd-get-server-host-from-pid $_ldap_server_pid)
+        _ldap_server_port=$(slapd-get-server-port-from-pid $_ldap_server_pid)
+
+        debug "[slapd-setup-test-server] ldap server already running:"
+        debug "[slapd-setup-test-server]   * ldaps://${_ldap_server_host}:${_ldap_server_port}"
+    else
+        _ldap_data_dir=$_data_dir
+
+        # Spin up a brand new LDAP server
+        slapd-server-test-setup-config $_ldap_data_dir
+        slapd-server-start $_ldap_data_dir/slapd.conf $_server_uri
+
+        _ldap_server_host=$_host
+        _ldap_server_port=$_port
+    fi
+
+    pushd-quiet $_ldap_data_dir
+
+    ldap-client-test-setup-config $_ldap_data_dir
+
+    # Seed initial LDAP data into the temp server
+    _base_ldif="$(project-root)/test/ldif_data/base.ldif"
+    ldap-import-ldif-safe $_base_ldif \
+                          $_ldap_server_host \
+                          $_ldap_server_port \
+                          $_rootdn \
+                          $_password
+
+    pushd-stepout
+
+    # Cleanup after Success
+    recursive-rm $_ldap_data_dir
+}
+
+slapd-get-server-port-from-pid() {
+    local _pid=
+    local _procline=
+    local _regex=
+    _pid="${1:?}"
+    _procline="$(slapd-get-server-uri-from-pid $_pid)"
+    _regex="ldap[s]?://.*:([0-9]+)\s?"
+
+    [[ $_procline =~ $_regex ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+slapd-get-server-host-from-pid() {
+    local _pid=
+    local _procline=
+    local _regex=
+    _pid="${1:?}"
+    _procline="$(slapd-get-server-uri-from-pid $_pid)"
+    _regex="ldap[s]?://(.*):[0-9]+\s?"
+
+    [[ $_procline =~ $_regex ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+slapd-get-server-from-pid() {
+    local _pid=
+    local _procline=
+    local _regex=
+    _pid="${1:?}"
+    _procline="$(slapd-get-server-uri-from-pid $_pid)"
+    _regex="ldap[s]?://(.*:[0-9]+)\s?"
+
+    [[ $_procline =~ $_regex ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+slapd-get-server-uri-from-pid() {
+    local _pid=
+    local _procline=
+    local _regex=
+    _pid="${1:?}"
+    _procline=$(get-procline-from-pid $_pid)
+    _regex="(ldap[s]?://.*:[0-9]+)\s?"
+
+    [[ $_procline =~ $_regex ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+slapd-get-data-dir-from-pid() {
+    local _pid=
+    local _procline=
+    local _regex=
+    _pid="${1:?}"
+    _procline=$(get-procline-from-pid $_pid)
+    _regex="(ldap[s]?://.*:[0-9]+)\s?"
+
+    [[ $_procline =~ $_regex ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+# spawn a new slapd server
+# returns PID
+slapd-server-start() {
+    local _config=
+    local _server=
+    local _cmd=
+    _config="${1:?}"
+    _server="${2:?}"
+
+    _cmd="$(slapd-cmd) -f $_config -h $_server &"
+    execute-string "${_cmd}"
+    debug "[slapd-server-start] Started slapd server on ${_server} with config ${_config}"
+}
+
+slapd-server-stop() {
+    local _pid=
+    _pid="${1:?}"
+
+    kill -9 $_pid
+    debug "[slapd-server-stop] stopped slapd server (PID: ${_pid})"
+}
+
+slapd-cleanup-test-data-dir() {
+    recursive-rm "${1:?}"
+}
+
+ldapadd-cmd() {
+    local _cmd=
+    _cmd="ldapadd"
+
+    if executable-in-path $_cmd;
+    then echo $_cmd;
+    else ldap-error-unable-to-find-ldapadd $_cmd;
+    fi
+}
+
+slappasswd-cmd() {
+    local _cmd=
+    _cmd='slappasswd'
+
+    if executable-in-path $_cmd;
+    then echo $_cmd;
+    else error-unable-to-find-ldapadd $_cmd;
+    fi
+}
+
+ldap-import-ldif() {
+    local _file=
+    local _host=
+    local _port=
+    local _user_cn=
+    local _password=
+    local _server=
+    local _cmd=
+    local _args=
+    local _conn_args=
+    local _user_args=
+    local _debug_args=
+    _file="${1:?}"
+    _host="${2:?}"
+    _port="${3:?}"
+    _user_cn="${4:?}"
+    _password="${5:?}"
+    _server="ldaps://${_host}:${_port}"
+
+    # Assemble Command Line Arguments
+    _conn_args="-h ${_host} -p ${_port} -z"
+    _user_args="-D '${_user_cn}' -w ${_password}"
+    if debug-enabled;
+    then _debug_args="-d 8"
+    fi
+    _args="${_conn_args} ${_user_args} ${_debug_args}"
+    _cmd="$(ldapadd-cmd) ${_args}"
+
+    if execute-string $_cmd;
+    then
+        debug "[ldap-import-ldif] Imported ldif ${_file} to ${_server}"
+        return true
+    else
+        fail-loudly "[ldap-import-ldif] Unable to import LDIF ${_file} on ${_server}"
+    fi
+}
+
+ldap-import-ldif-safe() {
+    local _file=
+    local _host=
+    local _port=
+    local _user_cn=
+    local _password=
+    _file="${1:?}"
+    _host="${2:?}"
+    _port="${3:?}"
+    _user_cn="${4:?}"
+    _password="${5:?}"
+
+    if file-exists $_file;
+    then
+        ldap-import-ldif $_file \
+                         $_host \
+                         $_port \
+                         $_user_cn \
+                         $_password
+    else ldap-error-cannot-find-ldif $_file;
+    fi
+}
+
+slapd-server-test-password-ssha() {
+    echo $(`slappasswd-cmd` -s "`slapd-server-test-password`")
+}
+
+slapd-server-test-password() {
+    echo "test"
+}
+
+slapd-server-test-rootdn() {
+    echo "cn=admin,$(slapd-server-test-suffix)"
+}
+
+slapd-server-test-suffix() {
+    echo "dc=example,dc=com"
+}
+
+# Generates an LDAP server with TLS for testing
+slapd-server-test-setup-config() {
+    local _tmpdir=
+    local _template=
+    local _template_file=
+    local _destination=
+    local _ssl_dir=
+    local _ssl_ca_cert=
+    local _ssl_server_cert=
+    local _ssl_server_key=
+
+    _tmpdir="${1:?}"
+    _template=$(slapd-server-test-config-template)
+    _template_file=$(basename $_template)
+    _destination="${_tmpdir}/${_template_file}"
+    _ssl_dir="${_destination}/.ssl"
+    _ssl_ca_cert="${_ssl_dir}/ca.crt"
+    _ssl_server_cert="${_ssl_dir}/server.crt"
+    _ssl_server_key="${_ssl_dir}/server.key"
+
+    safe-copy $_template $_destination
+    replace-string "/tmp/slapd" $_tmpdir $_destination
+    echo-to-file "TLSCACertificateFile ${_ssl_ca_cert}" $_destination
+    echo-to-file "TLSCertificateFile ${_ssl_server_cert}" $_destination
+    echo-to-file "TLSCertificateKeyFile ${_ssl_server_key}" $_destination
+
+    if os-is-osx;
+    then replace-string "/etc/ldap" "/etc/openldap" $_destination
+    fi
+}
+
+slapd-server-test-config-template() {
+    echo "$(project-root)/test/configs/slapd.conf"
+}
+
+slapd-error-cannot-find-cmd() {
+    error "Unable to find the 'slapd' executable ${1:?}"
+    exit 1
+}
+
+ldap-client-test-setup-config() {
+    local _dir=
+    local _ssl_dir=
+    local _ssl_ca_cert=
+    _dir="${1:?}"
+    _ssl_dir="${_dir}/.ssl"
+    _ca_cert="${_ssl_dir}/ca.crt"
+
+    echo-to-new-file "${_dir}/.ldaprc" "TLS_CACERT ${_ca_cert}"
+}
+
+ldap-error-cannot-find-ldif() {
+    error "Cannot find LDIF file ${1:?}"
+    exit 1
+}
+
+slapd-cmd-check-osx() {
+    slapd-cmd-check /usr/libexec
+}
+
+slapd-cmd-check() {
+    local _dir=
+    _dir="${1}"
+    _cmd='slapd'
+    _path="${_dir}/${_cmd}"
+
+    if variable-set $_dir;
+    then
+        if file-exists $_path;
+        then echo $_path;
+        else slapd-error-cannot-find-cmd $_path;
+        fi
+    else
+        if executable-in-path $_cmd;
+        then echo $_cmd;
+        else slapd-error-cannot-find-cmd $_cmd;
+        fi
+    fi
+}
+
+slapd-cmd() {
+   if os-is-osx;
+   then slapd-cmd-check-osx;
+   else slapd-cmd-check;
+   fi
+}

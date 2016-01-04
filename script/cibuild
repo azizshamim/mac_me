@@ -5,8 +5,30 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $DIR/helpers
 
-### PUT USER DATA HERE ###
-mix dogma
-mix test
+setup-test-ldap-server() {
+    slapd-setup-test-server
+}
 
-exit 0
+destroy-test-ldap-server() {
+    local _ldap_server_pid=
+    _ldap_server_pid="$(lookup-pid slapd)"
+
+    slapd-server-stop $_ldap_server_pid
+}
+
+run-dogma-linter() {
+    mix dogma
+}
+
+run-tests() {
+    mix test
+}
+
+init-cibuild() {
+    setup-test-ldap-server
+#    run-dogma-linter
+#    run-tests
+#    destroy-test-ldap-server
+}
+
+init-cibuild

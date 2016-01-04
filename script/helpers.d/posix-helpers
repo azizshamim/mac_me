@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+get-procline-from-pid() {
+    echo $(ps -p "${1:?}" -o command=)
+}
+
+lookup-pid() {
+    echo $(pgrep "${1:?}")
+}
+
+process-running() {
+    if pgrep "${1:?}";
+    then true
+    else false
+    fi
+}

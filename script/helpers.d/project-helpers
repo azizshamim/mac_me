@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+debug-enabled() {
+    if variable-set $DEBUG;
+    then true;
+    else false;
+    fi
+}
+
+run-bootstrap() {
+    run-bootstrap-script os
+    run-bootstrap-script "os-$(os-dist)"
+    run-bootstrap-script "os-$(os-dist)-$(os-revision)"
+}
+
+run-preflight() {
+    run-preflight-script os
+    run-preflight-script "os-$(os-dist)"
+    run-preflight-script "os-$(os-dist)-$(os-revision)"
+}
+
+run-script() {
+    local _script=
+    _script="$(script-root)/${1:?}"
+
+    if file-exists $_script;
+    then execute-script $_script;
+    fi
+}
+
+run-bootstrap-script() {
+    run-script "bootstrap-${1:?}"
+}
+
+run-preflight-script() {
+    run-script "preflight-${1:?}"
+}
+
+# get the current directory where shell scripts are stored
+#
+# returns string
+#
+# @ script-root
+script-root() {
+    execute-script "$(project-root)/script"
+}
+
+# get the root of the AIO project
+#
+# returns string
+#
+# @ project-root
+project-root() {
+    local _root="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    echo $(git-root $_root)
+}
+
