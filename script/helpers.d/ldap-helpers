@@ -6,69 +6,64 @@ set -o pipefail
 # sets up a test LDAP server. Returns a connection string
 #
 slapd-setup-test-server() {
+    local _host=
     local _port=
+    local _server=
+    local _server_uri=
     local _data_dir=
     local _suffix=
     local _rootdn=
-    local _server=
     local _password=
-    local _ldap_server_pid=
-    local _ldap_data_dir=
-    local _ldap_server_host=
-    local _ldap_server_port=
+    _host="localhost"
     _port=$(random-available-tcp-port)
+    _server="${_host}:${_port}"
+    _server_uri="ldaps://${_server}"
     _data_dir=$(random-tmpdir)
     _suffix=$(slapd-server-test-suffix)
     _rootdn=$(slapd-server-test-rootdn)
     _password=$(slapd-server-test-password)
-    _host="localhost"
-    _server="${_host}:${_port}"
-    _server_uri="ldaps://${_server}"
 
     # Bootstrap SSL Certificate
     bootstrap-test-ssl $_data_dir
 
-    # Attempt to bootstrap a new OpenLDAP server, or get details
-    # about the current one running.
-    #
-    # _ldap_server_host and _ldap_server_port should be set
-    # to feed to the initial LDIF import
-    if process-running slapd;
+    if process-not-running slapd;
     then
-        _ldap_server_pid=$(lookup-pid slapd)
-        _ldap_data_dir=$(lookup-cwd-from-pid $_ldap_server_pid)
-        _ldap_server_host=$(slapd-get-server-host-from-pid $_ldap_server_pid)
-        _ldap_server_port=$(slapd-get-server-port-from-pid $_ldap_server_pid)
-
-        debug "[slapd-setup-test-server] ldap server already running:"
-        debug "[slapd-setup-test-server]   * ldaps://${_ldap_server_host}:${_ldap_server_port}"
-    else
-        _ldap_data_dir=$_data_dir
-
         # Spin up a brand new LDAP server
-        slapd-server-test-setup-config $_ldap_data_dir
-        slapd-server-start $_ldap_data_dir/slapd.conf $_server_uri
+        slapd-server-test-setup-config $_data_dir
+        slapd-server-start $_data_dir/slapd.conf $_server_uri
 
-        _ldap_server_host=$_host
-        _ldap_server_port=$_port
+        # Seed initial LDAP data into the temp server
+        pushd-quiet $_data_dir
+
+        _base_ldif="$(project-root)/test/ldif_data/base.ldif"
+
+        ldap-client-test-setup-config $_data_dir
+        ldap-import-ldif-safe $_base_ldif \
+                              $_host \
+                              $_port \
+                              $_rootdn \
+                              $_password
+
+        pushd-stepout
+        recursive-rm $_data_dir
+
+    else notify-existing-ldap
     fi
+}
 
-    pushd-quiet $_ldap_data_dir
+notify-existing-ldap() {
+    local _ldap_server_pid=
+    local _ldap_server_host=
+    local _ldap_server_port=
 
-    ldap-client-test-setup-config $_ldap_data_dir
+    _ldap_server_pid=$(lookup-pid slapd)
+    _ldap_server_host=$(slapd-get-server-host-from-pid $_ldap_server_pid)
+    _ldap_server_port=$(slapd-get-server-port-from-pid $_ldap_server_pid)
 
-    # Seed initial LDAP data into the temp server
-    _base_ldif="$(project-root)/test/ldif_data/base.ldif"
-    ldap-import-ldif-safe $_base_ldif \
-                          $_ldap_server_host \
-                          $_ldap_server_port \
-                          $_rootdn \
-                          $_password
+    debug "[notify-existing-ldap] ldap server already running:"
+    debug "[notify-existing-ldap]   * ldaps://${_ldap_server_host}:${_ldap_server_port}"
 
-    pushd-stepout
-
-    # Cleanup after Success
-    recursive-rm $_ldap_data_dir
+    true
 }
 
 slapd-get-server-port-from-pid() {

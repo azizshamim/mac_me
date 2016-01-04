@@ -101,7 +101,6 @@ recursive-copy() {
     _src="${1:?}"
     _dst="${2:?}"
 
-    debug "[recursive-copy]: beginning copy from ${_src} to ${_dst}"
     cp -R $_src $_dst
     debug "[recursive-copy]: completed copy from ${_src} to ${_dst}"
 }
