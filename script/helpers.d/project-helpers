@@ -4,10 +4,14 @@ set -u
 set -o pipefail
 
 debug-enabled() {
+    set +u
+
     if variable-set $DEBUG;
     then true;
     else false;
     fi
+
+    set -u
 }
 
 run-bootstrap() {

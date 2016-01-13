@@ -19,10 +19,14 @@ variable-set() {
 #
 # @ variable-not-set <ENV>
 variable-not-set() {
-    if [[ -z "${1:?}" ]];
-    then true;
-    else false;
+    set +u
+
+    if [[ -z "${1}" ]];
+    then false;
+    else true;
     fi
+
+    set -u
 }
 
 # determine if a string equals another string
@@ -130,5 +134,12 @@ array-to-string()
 }
 
 replace-file-extension() {
-    echo "${1##.*:?}.${2:?}"
+    local _filename
+    local _extension=
+    local _new_extension=
+    _extension="${1##*.}"
+    _new_extension="${2:?}"
+    _file="$(basename $1 .$_extension)"
+
+    echo "${_file}.${_new_extension}"
 }

@@ -3,7 +3,63 @@ set -e
 set -u
 set -o pipefail
 
-autogenerate-ssl-root-ca() {
+# Creates a basic CA and certificate with defaults in a given directory. Files
+# are all created at top-level. Do not expect tidyness.
+#
+# bootstrap-test-ssl /tmp/tmpdir
+#
+# Creates:
+#  * /tmp/tmpdir/.ssl/ca.crt
+#  * /tmp/tmpdir/.ssl/ca.key
+#  * /tmp/tmpdir/.ssl/server.crt
+#  * /tmp/tmpdir/.ssl/server.key
+#
+#
+# specify 'client_cn' to customize client certificate.
+#
+# bootstrap-test-ssl /tmp/tmpdir test.server.org
+#
+# Creates:
+#  * /tmp/tmpdir/.ssl/ca.crt
+#  * /tmp/tmpdir/.ssl/ca.key
+#  * /tmp/tmpdir/.ssl/test.server.org.crt
+#  * /tmp/tmpdir/.ssl/test.server.org.key
+#
+# specify 'client_cn' to customize client certificate.
+bootstrap-test-ssl() {
+    # User
+    local dir=
+    local client_cn=
+
+    # Internal
+    local _ssl_dir=
+    local _ssl_ca_cert=
+    local _ssl_ca_key=
+    local _ssl_server_cert=
+    local _ssl_server_req=
+    local _ssl_server_key=
+
+    dir="${1:?}"
+    client_cn="${2:-server}"
+    _ssl_dir="${dir}/.ssl"
+    _ssl_ca_cert="${_ssl_dir}/ca.crt"
+    _ssl_ca_key="${_ssl_dir}/ca.key"
+    _ssl_server_cert="${_ssl_dir}/server.crt"
+    _ssl_server_req="${_ssl_dir}/server.csr"
+    _ssl_server_key="${_ssl_dir}/server.key"
+
+    # Create a new OpenSSL CA and Server Certificate
+    ensure-directory-exists $_ssl_dir
+    pushd-quiet $_ssl_dir
+
+    ssl-autogenerate-root-ca
+    ssl-autogenerate-certificate $client_cn
+
+    pushd-stepback
+}
+
+# Generates a new self-signed CA
+ssl-autogenerate-root-ca() {
     local _name=
     local _cn=
     local _country=
@@ -16,17 +72,26 @@ autogenerate-ssl-root-ca() {
     _country="${3:-US}"
     _state="${4:-TN}"
     _locality="${5:-Nashville}"
-    _organization="${6:RandomCompanyInc}"
+    _organization="${6:-RandomCompanyInc}"
     _unit="${7:-IT}"
 
-    generate-openssl-ca-config
-    openssl-autogen $_name cer \
-                    $(openssl-autogen-ca-config) \
-                    $_country $_state $_locality \
-                    $_organization $_unit $_cn
+    ssl-autogenerate-create-ca-config
+    openssl-generate-ca $_name \
+                        $(ssl-autogenerate-ca-config) \
+                        $_country $_state $_locality \
+                        $_organization $_unit $_cn
+}
+#
+ssl-autogenerate-certificate() {
+    local _cn=
+    _cn="${1:?}"
+
+    ssl-autogenerate-create-certificate-config
+    ssl-autogenerate-certificate-request $_cn
+    ssl-autogenerate-sign-certificate-request
 }
 
-autogenerate-ssl-client-cert-request() {
+ssl-autogenerate-certificate-request() {
     local _name=
     local _cn=
     local _country=
@@ -39,24 +104,238 @@ autogenerate-ssl-client-cert-request() {
     _country="${3:-US}"
     _state="${4:-TN}"
     _locality="${5:-Nashville}"
-    _organization="${6:RandomCompanyInc}"
+    _organization="${6:-RandomCompanyInc}"
     _unit="${7:-IT}"
 
-    generate-openssl-ca-cert-config $_dir
-    openssl-autogen $_name req \
-                    $(openssl-autogen-ca-cert-config) \
-                    $_country $_state $_locality \
-                    $_organization $_unit $_cn
+    ssl-autogenerate-create-ca-config
+    openssl-generate-certificate-request $_name \
+                                         $(ssl-autogenerate-certificate-config) \
+                                         $_country $_state $_locality \
+                                         $_organization $_unit $_cn
 }
 
-autogenerate-ssl-sign-cert-req() {
+ssl-autogenerate-sign-certificate-request() {
     local _name=
     _name="${1:-server}"
 
-    openssl-autogen-sign-cert-req $_name.csr
+    openssl-sign-certificate-request $_name.csr
 }
 
-openssl-autogen-sign-cert-req() {
+ssl-autogenerate-ca-config() {
+    echo "openssl-ca-config.cfg"
+}
+
+ssl-autogenerate-certificate-config() {
+    echo "openssl-cert-config.cfg"
+}
+
+ssl-autogenerate-create-ca-config() {
+    cat > $(ssl-autogenerate-ca-config) <<EOF
+[ ca ]
+default_ca = autogen_ca
+
+[ req ]
+default_req = autogen_req
+req_extensions = cert_ext
+distinguished_name = cert_dn
+
+[ autogen_ca ]
+certificate      = ca.crt
+database         = index.txt
+new_certs_dir    = .
+private_key      = ca.key
+serial           = serial
+RANDFILE         = .rnd
+default_crl_days = 3650
+default_days     = 3650
+default_md       = sha256
+policy           = policy
+x509_extensions  = extensions
+
+[ autogen_req ]
+default_bits    = 4096
+default_keyfile = ca.key
+default_md      = sha256
+default_days    = 3650
+prompt          = no
+policy          = cert_policy
+string_mask     = utf8only
+
+[ cert_policy ]
+commonName              = optional
+stateOrProvinceName     = optional
+countryName             = optional
+emailAddress            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+
+[ cert_dn ]
+commonName_default             = fqdn.hostname.com
+stateOrProvinceName            = California
+stateOrProvinceName_default    = California
+countryName                    = US
+countryName_default            = US
+emailAddress                   = me@myawesomecompany.com
+emailAddress_default           = me@myawesomecompany.com
+organizationName               = MyAwesomeCompany
+organizationName_default       = MyAwesomeCompany
+organizationalUnitName         = Information Technology
+organizationalUnitName_default = IT
+
+[ cert_ext ]
+subjectKeyIdentifier   = hash
+basicConstraints       = critical,CA:true,pathlen:0
+nsCertType             = sslCA
+nsComment              = "Autogenerated CA"
+authorityKeyIdentifier = keyid:always,issuer:always
+EOF
+
+    echo "0" > serial
+}
+
+ssl-autogenerate-create-certificate-config() {
+    cat > $(ssl-autogenerate-certificate-config) <<EOF
+[ ca ]
+default_ca = autogen_ca
+
+[ req ]
+default_req = autogen_req
+req_extensions = cert_ext
+distinguished_name = cert_dn
+
+[ autogen_ca ]
+certificate      = ca.crt
+database         = index.txt
+new_certs_dir    = .
+private_key      = ca.key
+serial           = serial
+RANDFILE         = .rnd
+default_crl_days = 3650
+default_days     = 3650
+default_md       = sha256
+policy           = policy
+x509_extensions  = extensions
+
+[ autogen_req ]
+default_bits    = 4096
+default_keyfile = ca.key
+default_md      = sha256
+default_days    = 3650
+prompt          = no
+policy          = cert_policy
+string_mask     = utf8only
+
+[ cert_policy ]
+commonName              = optional
+stateOrProvinceName     = optional
+countryName             = optional
+emailAddress            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+
+[ cert_dn ]
+commonName_default             = fqdn.hostname.com
+stateOrProvinceName            = California
+stateOrProvinceName_default    = California
+countryName                    = US
+countryName_default            = US
+emailAddress                   = me@myawesomecompany.com
+emailAddress_default           = me@myawesomecompany.com
+organizationName               = MyAwesomeCompany
+organizationName_default       = MyAwesomeCompany
+organizationalUnitName         = Information Technology
+organizationalUnitName_default = IT
+
+[ cert_ext ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+
+EOF
+}
+#
+# Generates a named ('name') OpenSSL certificate keypair,
+#  or certificate request depending on 'type'. Allowed types are 'req', 'cer'
+#
+# Requires a configuration file passed.
+openssl-generate-ca() {
+    local _name=
+    local _type=
+    local _config=
+    local _country=
+    local _state=
+    local _locality=
+    local _organization=
+    local _unit=
+    local _cn=
+    _name="${1:?}"
+    _config="${2:?}"
+    _country="${3:?}"
+    _state="${4:?}"
+    _locality="${5:?}"
+    _organization="${6:?}"
+    _unit="${7:?}"
+    _cn="${8:?}"
+
+    debug "[openssl-generate-ca] running openssl with options:"
+    debug "[openssl-generate-ca]   * name: ${_name}"
+    debug "[openssl-generate-ca]   * type: ${_type}"
+    debug "[openssl-generate-ca]   * config: ${_config}"
+    debug "[openssl-generate-ca]   * country: ${_country}"
+    debug "[openssl-generate-ca]   * state: ${_state}"
+    debug "[openssl-generate-ca]   * locality: ${_locality}"
+    debug "[openssl-generate-ca]   * organization: ${_organization}"
+    debug "[openssl-generate-ca]   * unit: ${_unit}"
+    debug "[openssl-generate-ca]   * common name: ${_cn}"
+
+    openssl req -new \
+            -x509 -nodes -newkey rsa:2048 \
+            -keyout $_name.key -out "${_name}.crt" \
+            -config $_config \
+            -subj "/C=${_country}/ST=${_state}/L=${_locality}/O=${_organization}/OU=${_unit}/CN=${_cn}"
+}
+
+# Generates a named ('name') OpenSSL certificate keypair,
+#  or certificate request depending on 'type'. Allowed types are 'req', 'cer'
+#
+# Requires a configuration file passed.
+openssl-generate-certificate-request() {
+    local _name=
+    local _config=
+    local _country=
+    local _state=
+    local _locality=
+    local _organization=
+    local _unit=
+    local _cn=
+    _name="${1:?}"
+    _config="${2:?}"
+    _country="${3:?}"
+    _state="${4:?}"
+    _locality="${5:?}"
+    _organization="${6:?}"
+    _unit="${7:?}"
+    _cn="${8:?}"
+
+    debug "[openssl-generate-certificate-request] running openssl with options:"
+    debug "[openssl-generate-certificate-request]   * name: ${_name}"
+    debug "[openssl-generate-certificate-request]   * config: ${_config}"
+    debug "[openssl-generate-certificate-request]   * country: ${_country}"
+    debug "[openssl-generate-certificate-request]   * state: ${_state}"
+    debug "[openssl-generate-certificate-request]   * locality: ${_locality}"
+    debug "[openssl-generate-certificate-request]   * organization: ${_organization}"
+    debug "[openssl-generate-certificate-request]   * unit: ${_unit}"
+    debug "[openssl-generate-certificate-request]   * common name: ${_cn}"
+
+    openssl req -new \
+            -nodes -newkey rsa:2048 \
+            -keyout $_name.key -out "${_name}.csr" \
+            -config $_config \
+            -subj "/C=${_country}/ST=${_state}/L=${_locality}/O=${_organization}/OU=${_unit}/CN=${_cn}"
+}
+
+# Signs a certificate request from openssl-autogen of type 'key'.
+# Automatically assigns a random 6-digit hex serial if not specified
+openssl-sign-certificate-request() {
     local _csr=
     local _ssl_cert=
     local _ca_cert=
@@ -66,229 +345,16 @@ openssl-autogen-sign-cert-req() {
     _ssl_cert=$(replace-file-extension $_csr crt)
     _ca_cert="${2:-ca.crt}"
     _ca_key="${3:-ca.key}"
-    _serial=${4:-$(random-hex 6)}
+    _serial="${4:-$(random-hex 6)}"
 
-    debug "[openssl-autogen-sign-cert-req] signing openssl cert with options:"
-    debug "[openssl-autogen-sign-cert-req] * csr: ${_csr}"
-    debug "[openssl-autogen-sign-cert-req] * ca certificate: ${_ca_cert}"
-    debug "[openssl-autogen-sign-cert-req] * ca key: ${_ca_key}"
-    debug "[openssl-autogen-sign-cert-req] * serial: ${_serial}"
+    debug "[openssl-sign-certificate-request] signing openssl cert with options:"
+    debug "[openssl-sign-certificate-request] * csr: ${_csr}"
+    debug "[openssl-sign-certificate-request] * ca certificate: ${_ca_cert}"
+    debug "[openssl-sign-certificate-request] * ca key: ${_ca_key}"
+    debug "[openssl-sign-certificate-request] * serial: ${_serial}"
 
     openssl x509 -req \
             -in $_csr -out $_ssl_cert \
             -CA $_ca_cert -CAkey $_ca_key \
-            -set_serial $_serial \
-}
-
-openssl-autogen() {
-    local _name="${1:?}"
-    local _type="${2:?}"
-    local _config="${3:?}"
-    local _country="${4:?}"
-    local _state="${5:?}"
-    local _locality="${6:?}"
-    local _organization="${7:?}"
-    local _unit="${8:?}"
-    local _cn="${9:?}"
-
-    debug "[openssl-autogen] running openssl with options:"
-    debug "[openssl-autogen]   * name: ${_name}"
-    debug "[openssl-autogen]   * type: ${_type}"
-    debug "[openssl-autogen]   * config: ${_config}"
-    debug "[openssl-autogen]   * country: ${_country}"
-    debug "[openssl-autogen]   * state: ${_state}"
-    debug "[openssl-autogen]   * locality: ${_locality}"
-    debug "[openssl-autogen]   * organization: ${_organization}"
-    debug "[openssl-autogen]   * unit: ${_unit}"
-    debug "[openssl-autogen]   * common name: ${_cn}"
-
-    openssl req -new \
-            -x509 -nodes -newkey rsa:2048 \
-            -keyout ${_name}.key -out ${_name}.${_type} \
-            -config ${_config} \
-            -subj "C=${_country}/ST=${_state}/L=${_locality}/O=${_organization}/OU=${_unit}/CN=${_cn}"
-}
-
-generate-openssl-autogen-ca-config() {
-    cat > $(openssl-autogen-ca-config) <<EOF
-BASEDIR=.
-
-[ ca ]
-default_ca = default_ca
-
-[ req ]
-default_req = stackstorm_req
-req_extensions = cert_ext
-distinguished_name = cert_dn
-
-[ default_ca ]
-certificate      = <%= @_ca_cert %>
-database         = $BASEDIR/index.txt
-new_certs_dir    = $BASEDIR/certs
-private_key      = <%= @_ca_key %>
-private_key      = $BASEDIR/ca.key
-serial           = $BASEDIR/serial
-RANDFILE         = $BASEDIR/.rnd
-default_crl_days = 30
-default_days     = <%= @_ca_expiration %>
-default_md       = sha256
-policy           = policy
-x509_extensions  = extensions
-
-[ stackstorm_req ]
-default_bits    = 2048
-default_keyfile = <%= @_ca_key %>
-default_md      = sha256
-default_days    = <%= @_ssl_expiration %>
-prompt          = no
-policy          = cert_policy
-string_mask     = utf8only
-
-[ cert_policy ]
-commonName              = optional
-stateOrProvinceName     = optional
-countryName             = optional
-emailAddress            = optional
-organizationName        = optional
-organizationalUnitName  = optional
-
-[ cert_dn ]
-commonName                     = fqdn.hostname.com
-commonName_default             = <%= @_fqdn %>
-stateOrProvinceName            = California
-stateOrProvinceName_default    = <%= @state %>
-countryName                    = US
-countryName_default            = <%= @country %>
-emailAddress                   = me@myawesomecompany.com
-emailAddress_default           = <%= @email %>
-organizationName               = MyAwesomeCompany
-organizationName_default       = StackStorm
-organizationalUnitName         = Information Technology
-organizationalUnitName_default = IT
-
-[ cert_ext ]
-subjectKeyIdentifier   = hash
-basicConstraints       = critical,CA:true,pathlen:0
-nsCertType             = sslCA
-nsComment              = "Autogenerated CA for StackStorm"
-authorityKeyIdentifier = keyid:always,issuer:always
-
-EOF
-}
-
-openssl-autogen-ca-config() {
-    echo "openssl-ca-config.cfg"
-}
-
-generate-openssl-autogen-ca-cert-config() {
-    echo > $(openssl-autogen-ca-cert-config) <<EOF
-<%- require "ipaddress" -%>
-BASEDIR=.
-
-[ ca ]
-default_ca = stackstorm_ca
-
-[ req ]
-default_req = stackstorm_req
-req_extensions = cert_ext
-distinguished_name = cert_dn
-
-[ stackstorm_ca ]
-certificate      = <%= @_ca_cert %>
-database         = $BASEDIR/index.txt
-new_certs_dir    = $BASEDIR/certs
-private_key      = <%= @_ca_key %>
-serial           = $BASEDIR/serial
-RANDFILE         = $BASEDIR/.rnd
-default_crl_days = 30
-default_days     = <%= @_ca_expiration %>
-default_md       = sha256
-policy           = policy
-x509_extensions  = extensions
-
-[ stackstorm_req ]
-default_bits    = 2048
-default_keyfile = <%= @_ca_key %>
-default_md      = sha256
-default_days    = <%= @_ssl_expiration %>
-prompt          = no
-policy          = cert_policy
-string_mask     = utf8only
-
-[ cert_policy ]
-commonName              = optional
-stateOrProvinceName     = optional
-countryName             = optional
-emailAddress            = optional
-organizationName        = optional
-organizationalUnitName  = optional
-
-[ cert_dn ]
-commonName                     = fqdn.hostname.com
-commonName_default             = <%= @_fqdn %>
-stateOrProvinceName            = California
-stateOrProvinceName_default    = <%= @state %>
-countryName                    = US
-countryName_default            = <%= @country %>
-emailAddress                   = me@myawesomecompany.com
-emailAddress_default           = <%= @email %>
-organizationName               = MyAwesomeCompany
-organizationName_default       = StackStorm
-organizationalUnitName         = Information Technology
-organizationalUnitName_default = IT
-
-[ cert_ext ]
-basicConstraints = CA:FALSE
-keyUsage = digitalSignature, keyEncipherment
-subjectAltName = @alt_names
-
-[ alt_names ]
-<%- @altnames.sort.each_with_index do |name, index| -%>
-  <%- next if name == @_fqdn -%>
-  <%- if IPAddress.valid_ipv4?(name) then -%>
-IP.<%= index+1 %> = <%= name %>
-  <%- else -%>
-DNS.<%= index+1 %> = <%= name %>
-  <%- end -%>
-<%- end -%>
-
-EOF
-}
-
-openssl-autogen-ca-cert-config() {
-    echo "openssl-ca-cert-config.cfg"
-}
-
-# Creates a basic CA and certificate with defaults in
-# a given directory
-#
-# creates {ca,server}.{crt,key}
-#
-# bootstrap-test-ssl /tmp/tmpdir
-bootstrap-test-ssl() {
-    local _dir=
-    local _ssl_dir=
-    local _ssl_ca_cert=
-    local _ssl_ca_key=
-    local _ssl_server_cert=
-    local _ssl_server_req=
-    local _ssl_server_key=
-
-    _dir="${1:?}"
-    _ssl_dir="${_dir}/.ssl"
-    _ssl_ca_cert="${_ssl_dir}/ca.crt"
-    _ssl_ca_key="${_ssl_dir}/ca.key"
-    _ssl_server_cert="${_ssl_dir}/server.crt"
-    _ssl_server_req="${_ssl_dir}/server.csr"
-    _ssl_server_key="${_ssl_dir}/server.key"
-
-    # Create a new OpenSSL CA and Server Certificate
-    ensure-directory $_ssl_dir
-    pushd-quiet $_ssl_dir
-
-    autogenerate-ssl-root-ca
-    autogenerate-ssl-client-cert-request
-    autogenerate-ssl-sign-cert-req
-
-    pushd-stepout
+            -set_serial $_serial
 }

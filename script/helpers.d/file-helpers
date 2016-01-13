@@ -170,10 +170,14 @@ file-does-not-exist() {
 #
 # @ file-exists <file>
 file-exists() {
-    if [[ -f "${1:?}" ]];
+    set +u
+
+    if [[ -f "${1}" ]];
     then true;
     else false;
     fi
+
+    set -u
 }
 
 # tests to determine if an executable is in the current running
@@ -221,6 +225,6 @@ echo-to-file() {
     local _message="${1:?}"
     local _dest="${2:?}"
 
-    echo "${message}" >> $_dest
+    echo "${_message}" >> $_dest
     debug "[echo-to-file]: echoed '${_message}' to ${_dest}"
 }

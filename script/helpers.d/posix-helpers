@@ -19,5 +19,5 @@ process-running() {
 }
 
 process-not-running() {
-    ! process-running
+    ! process-running $@
 }

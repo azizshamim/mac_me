@@ -6,8 +6,8 @@ set -o pipefail
 random-hex() {
     local _numbers=
     local _random=
-    _numbers="${1:8}"
-    _random="$(openssl rand -hex $_{numbers}"
+    _numbers="${1:-8}"
+    _random=$(openssl rand -hex $_numbers)
 
     echo "0x${_random}"
 }

@@ -53,13 +53,13 @@ replace-string() {
     _tmpfile="${_tmpdir}/${_filename}"
 
     debug "[replace-string] Making backup of ${_file} to ${_tmpfile}"
-    safe-copy $_file $_tmpfile
+    recursive-copy $_file $_tmpfile
 
     debug "[replace-string] Replacing '${_find}' with '${_replace}' in ${_tmpfile}"
     sed -i '' "s/${_escaped_find}/${_escaped_replace}/g" $_tmpfile
 
     debug "[replace-string] Copying edited file to ${_file}"
-    safe-copy $_tmpfile $_file
+    recursive-copy $_tmpfile $_file
 }
 
 # Thanks to Gurpartap Singh! :bow:
