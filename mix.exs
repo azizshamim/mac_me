@@ -19,8 +19,7 @@ defmodule MacMe.Mixfile do
   # Type `mix help compile.app` for more information
   def application do
     [mod: {MacMe, []},
-     applications: [:phoenix, :cowboy, :logger, :phoenix_ecto, :sqlite_ecto,
-                    :httpoison]]
+     applications: [:phoenix, :cowboy, :logger, :httpoison]]
   end
 
   # Specifies which paths to compile per environment
@@ -32,8 +31,6 @@ defmodule MacMe.Mixfile do
   # Type `mix help deps` for examples and options
   defp deps do
     [{:phoenix, "~> 1.0.2"},
-     {:phoenix_ecto, "~> 1.1"},
-     {:sqlite_ecto, "~> 1.0.2"},
      {:phoenix_html, "~> 2.1"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
      {:cowboy, "~> 1.0"},
@@ -41,6 +38,7 @@ defmodule MacMe.Mixfile do
      {:httpoison, "~> 0.7.4"},
      {:edeliver, ">= 1.1.1"},
      {:dialyxir, github: "jeremyjh/dialyxir", only: [:dev, :test]},
+     {:credo, "~> 0.2", only: [:dev, :test]},
      {:dogma, github: "lpil/dogma", only: [:dev, :test]},
      {:faker, "~> 0.5", only: [:dev, :test]},
      {:mock, "~> 0.1.1", only: :test}]

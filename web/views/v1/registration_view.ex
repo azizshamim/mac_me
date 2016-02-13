@@ -1,5 +1,3 @@
-require IEx
-
 defmodule MacMe.V1.RegistrationView do
   @moduledoc """
   Representation of the data structures that make it back to the user for
@@ -14,7 +12,6 @@ defmodule MacMe.V1.RegistrationView do
   end
 
   def render("register.json", %{device: device}) do
-    IEx.pry
     %{
       device: device,
      }

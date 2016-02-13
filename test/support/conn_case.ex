@@ -20,10 +20,6 @@ defmodule MacMe.ConnCase do
       # Import conveniences for testing with connections
       use Phoenix.ConnTest
 
-      alias MacMe.Repo
-      import Ecto.Model
-      import Ecto.Query, only: [from: 2]
-
       import MacMe.Router.Helpers
 
       # The default endpoint for testing
@@ -32,10 +28,6 @@ defmodule MacMe.ConnCase do
   end
 
   setup tags do
-    unless tags[:async] do
-      Ecto.Adapters.SQL.restart_test_transaction(MacMe.Repo, [])
-    end
-
     :ok
   end
 end

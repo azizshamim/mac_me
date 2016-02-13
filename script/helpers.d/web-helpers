@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+# With much appreciation from http://stackoverflow.com/users/912236/orwellophile
+# http://stackoverflow.com/a/10660730
+url-encode() {
+  local string="${1:?}"
+  local strlen=${#string}
+  local encoded=""
+
+  for (( pos=0 ; pos<strlen ; pos++ )); do
+     c=${string:$pos:1}
+     case "$c" in
+        [-_.~a-zA-Z0-9] ) o="${c}" ;;
+        * )               printf -v o '%%%02x' "'$c"
+     esac
+     encoded+="${o}"
+  done
+
+  echo "${encoded}"
+}
+
+# With much appreciation from http://stackoverflow.com/users/912236/orwellophile
+# http://stackoverflow.com/a/10660730
+url-decode() {
+    printf -v REPLY '%b' "${1//%/\\x}"
+    echo "${REPLY}"
+}

@@ -24,24 +24,24 @@ defmodule MacMe.V1.RegistrationController do
     # because it's just a username and a MAC. Maybe at some point this gets
     # done differently at some point in the future. Let's help our friends
     # out.
-    case {user, device} do
-      {[], []} ->
-        conn
-        |> attempt_user_registration(user_params)
-        |> attempt_device_registration(device_params)
-        |> create(%{"registration" => registration_params})
-      {_, []} ->
-        conn
-        |> attempt_device_registration(device_params)
-        |> create(%{"registration" => registration_params})
-      {[], _} ->
-        conn
-        |> attempt_user_registration(user_params)
-        |> create(%{"registration" => registration_params})
-      {_, _}->
-        conn
-        |> register_user_device(user, device)
-    end
+  #   case {user, device} do
+  #     {[], []} ->
+  #       conn
+  #       |> attempt_user_registration(user_params)
+  #       |> attempt_device_registration(device_params)
+  #       |> create(%{"registration" => registration_params})
+  #     {_, []} ->
+  #       conn
+  #       |> attempt_device_registration(device_params)
+  #       |> create(%{"registration" => registration_params})
+  #     {[], _} ->
+  #       conn
+  #       |> attempt_user_registration(user_params)
+  #       |> create(%{"registration" => registration_params})
+  #     {_, _}->
+  #       conn
+  #       |> register_user_device(user, device)
+  #   end
   end
 
   defp attempt_device_registration(conn, device_params) do

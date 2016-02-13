@@ -4,9 +4,6 @@ defmodule MacMe do
   Accomplished by mapping owned devices (MAC address). Scans for all active
   devices on the wire (and WiFi -- future) and de-references against a known
   DB of devices to users.
-
-  Two supervisors in play: Main and Backend. Main handles Phoenix and friends,
-  while the Backend is responsible for ARP and WiFi scanning.
   """
 
   use Application
@@ -16,12 +13,12 @@ defmodule MacMe do
 
     children = [
       supervisor(MacMe.Endpoint, []),
-      worker(MacMe.Repo, []),
-      worker(MacMe.BackendSupervisor, []),
+      supervisor(MacMe.DeviceSupervisor, []),
+      supervisor(MacMe.DatabaseSupervisor, [])
     ]
 
-    opts = [strategy: :one_for_one, name: MacMe.Supervisor]
-    Supervisor.start_link(children, opts)
+    opts = [strategy: :one_for_one, name: Supervisor]
+    {:ok, _} = Supervisor.start_link(children, opts)
   end
 
   # Tell Phoenix to update the endpoint configuration

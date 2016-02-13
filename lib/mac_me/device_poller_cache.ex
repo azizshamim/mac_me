@@ -1,4 +1,4 @@
-defmodule MacMe.DeviceData do
+defmodule MacMe.DevicePollerCache do
   @moduledoc """
   This process provides a container to hold cached state of devices found.
   DevicePoller will drop data into this process to hold state in the event
@@ -9,9 +9,11 @@ defmodule MacMe.DeviceData do
   """
   use GenServer
 
+  @name MacMe.DevicePollerCache
+
   # Public API
   def start_link do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+    GenServer.start_link(__MODULE__, [], name: @name)
   end
 
   def save_state(pid, state) do

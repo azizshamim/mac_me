@@ -1,3 +1,5 @@
+require IEx
+
 defmodule MacMe.DevicePoller do
   @moduledoc """
   This is a factory module that wraps GenServer with a pluggable
@@ -10,34 +12,36 @@ defmodule MacMe.DevicePoller do
 
   use GenServer
 
+  @name MacMe.DevicePoller
+  @poller_cache MacMe.DevicePollerCache
   @scanned_subnets Application.get_env(:mac_me, :scanned_subnets)
   @device_poller Application.get_env(:mac_me, :device_poller)
   @poll_interval Application.get_env(:mac_me, :poll_interval)
 
   # Public API
-  def start_link(device_data_pid) do
-    GenServer.start_link(__MODULE__, device_data_pid, name: __MODULE__)
+  def start_link do
+    GenServer.start_link(__MODULE__, @poller_cache, name: @name)
   end
 
   # GenServer
-  def init(device_data_pid) do
-    devices = poll_for_devices(device_data_pid)
+  def init(_) do
+    devices = poll_for_devices
 
-    Process.send_after(device_data_pid, :poll, @poll_interval)
-    {:ok, {devices, device_data_pid}}
+    Process.send_after(@poller_cache, :poll, @poll_interval)
+    {:ok, devices}
   end
 
-  def handle_info(:poll, {_devices, device_data_pid}) do
-    devices = poll_for_devices(device_data_pid)
+  def handle_info(:poll, {_devices}) do
+    devices = poll_for_devices
 
-    Process.send_after(device_data_pid, :poll, @poll_interval)
-    {:noreply, {devices, device_data_pid}}
+    Process.send_after(@poller_cache, :poll, @poll_interval)
+    {:noreply, devices}
   end
 
   # Private API
-  defp poll_for_devices(device_data_pid) do
+  defp poll_for_devices do
     devices = @device_poller.run(@scanned_subnets)
-    MacMe.DeviceData.save_state(device_data_pid, devices)
+    MacMe.DevicePollerCache.save_state(@poller_cache, devices)
 
     devices
   end

@@ -4,15 +4,16 @@ defmodule MacMe.DevicePollerSupervisor do
   """
   use Supervisor
 
+  @name MacMe.DevicePollerSupervisor
   @device_poller MacMe.DevicePoller
 
-  def start_link(device_data_pid) do
-    Supervisor.start_link(__MODULE__, device_data_pid, name: __MODULE__)
+  def start_link do
+    Supervisor.start_link(__MODULE__, :ok, name: @name)
   end
 
-  def init(device_data_pid) do
+  def init(_) do
     children = [
-      worker(@device_poller, [device_data_pid])
+      worker(@device_poller, [])
     ]
 
     {:ok, _} = supervise(children, strategy: :one_for_one)

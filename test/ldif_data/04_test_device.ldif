@@ -1,0 +1,5 @@
+dn: cn=test-device,ou=Hosts,dc=example,dc=com
+changetype: add
+objectClass: device
+objectClass: top
+cn: test-device

@@ -12,40 +12,68 @@ slapd-setup-test-server() {
     local _suffix=
     local _rootdn=
     local _password=
+    _data_dir=$(random-tmpdir)
     _host="127.0.0.1"
-    _port=$(random-available-tcp-port)
+    _port="3890"
     _server="${_host}:${_port}"
     _server_uri="ldap://${_server}"
-    _data_dir=$(random-tmpdir)
+    _socket="${_data_dir}/ldap.sock"
+    _server_socket="ldapi://$(url-encode $_socket)"
     _suffix=$(slapd-server-test-suffix)
     _rootdn=$(slapd-server-test-rootdn)
     _password=$(slapd-server-test-password)
 
     if process-not-running slapd;
     then
-        # Bootstrap SSL Certificate
-        bootstrap-test-ssl $_data_dir
-
         # Spin up a brand new LDAP server
         slapd-server-test-setup-config $_data_dir
-        slapd-server-start $_data_dir/slapd.conf $_server_uri
-
-        # Seed initial LDAP data into the temp server
-        pushd-quiet $_data_dir
-
-        _base_ldif="$(project-root)/test/ldif_data/base.ldif"
-
-        ldap-client-test-setup-config $_data_dir
-        ldap-import-ldif $_base_ldif \
-                         $_server_uri \
-                         $_rootdn \
-                         $_password
-
-        pushd-stepout
-        recursive-rm $_data_dir
-
+        bootstrap-test-ssl $_data_dir
+        slapd-server-start $_data_dir/slapd.conf $_server_uri $_server_socket
+        slapd-server-test-import-ldifs $_data_dir $_server_socket
     else notify-existing-ldap
     fi
+}
+
+slapd-server-test-setup-config() {
+    local _tmpdir=
+    local _config_src=
+    local _config_dest=
+    local _ssl_dir=
+    local _ssl_ca_cert=
+    local _ssl_server_cert=
+    local _ssl_server_key=
+
+    _tmpdir="${1:?}"
+    _config_src=$(slapd-server-test-config-template)
+    _config_dest="${_tmpdir}/$(basename $_config_src)"
+
+    recursive-copy $_config_src $_config_dest
+    replace-string "/tmp/slapd" $_tmpdir $_config_dest
+
+    if os-is-osx;
+    then replace-string "/etc/ldap" "/etc/openldap" $_config_dest
+    fi
+}
+
+slapd-server-test-import-ldifs() {
+    local _tmpdir=
+    local _socket=
+    local _file=
+    _tmpdir="${1:?}"
+    _socket="${2:?}"
+
+    _ldif_dir="${_tmpdir}/ldif"
+    _data_dir="${_tmpdir}/example.com"
+
+    recursive-mkdir $_ldif_dir
+    recursive-mkdir $_data_dir
+    recursive-copy "$(project-root)/test/ldif_data/*.ldif" $_ldif_dir
+
+    for _file in $(files-in-dir $_ldif_dir);
+    do
+        replace-string "/tmp/slapd" $_tmpdir $_file
+        ldap-ldif-add $_file $_socket
+    done
 }
 
 notify-existing-ldap() {
@@ -54,9 +82,11 @@ notify-existing-ldap() {
 
     _ldap_server_pid=$(lookup-pid slapd)
     _ldap_server=$(slapd-get-server-uri-from-pid $_ldap_server_pid)
+    _ldap_socket=$(slapd-get-server-socket-from-pid $_ldap_server_pid)
 
     debug "[notify-existing-ldap] ldap server already running:"
     debug "[notify-existing-ldap]   * ${_ldap_server}"
+    debug "[notify-existing-ldap]   * ${_ldap_socket}"
 
     true
 }
@@ -71,6 +101,20 @@ slapd-get-server-uri-from-pid() {
 
     [[ $_procline =~ $_regex ]]
     echo ${BASH_REMATCH[1]}
+}
+
+slapd-get-server-socket-from-pid() {
+    local _pid=
+    local _procline=
+    local _regex=
+    local _match=
+    _pid="${1:?}"
+    _procline=$(get-procline-from-pid $_pid)
+    _regex="ldapi://(.*)\s?"
+
+    [[ $_procline =~ $_regex ]]
+    _match=${BASH_REMATCH[1]}
+    echo "ldapi://$(url-decode $_match)"
 }
 
 slapd-get-data-dir-from-pid() {
@@ -88,13 +132,15 @@ slapd-get-data-dir-from-pid() {
 slapd-server-start() {
     local _config=
     local _server=
+    local _socket=
     local _cmd=
     local _data_dir=
     _config="${1:?}"
     _server="${2:?}"
+    _socket="${3:-}"
     _data_dir=$(dirname $_config)
 
-    _cmd="$(slapd-cmd) -f $_config -F $_data_dir -h $_server &"
+    _cmd="$(slapd-cmd) -f $_config -F $_data_dir -h '$_server $_socket'"
     execute-string "${_cmd}"
     debug "[slapd-server-start] Started slapd server on ${_server} with config ${_config}"
 }
@@ -107,8 +153,18 @@ slapd-server-stop() {
     debug "[slapd-server-stop] stopped slapd server (PID: ${_pid})"
 }
 
-slapd-cleanup-test-data-dir() {
-    recursive-rm "${1:?}"
+ldapcmd-check-osx() {
+    local _cmd=
+    local _homebrew_dir=
+    _cmd="${1:?}"
+    _homebrew_dir="${HOMEBREW_ROOT}/Cellar/openldap/2.4.43"
+
+    if file-exists $_homebrew_dir/bin/$_cmd;
+    then echo $_homebrew_dir/bin/$_cmd;
+    elif file-exists $_homebrew_dir/sbin/$_cmd;
+    then echo $_homebrew_dir/sbin/$_cmd;
+    else ldap-error-enable-to-find-ldapcmd $_cmd;
+    fi
 }
 
 ldapcmd-check() {
@@ -122,75 +178,41 @@ ldapcmd-check() {
 }
 
 ldapmodify-cmd() {
-    ldapcmd-check ldapmodify
+    if os-is-osx;
+    then ldapcmd-check-osx ldapmodify
+    else ldapcmd-check ldapmodify
+    fi
 }
 
 ldapadd-cmd() {
-    ldapcmd-check ldapadd
+    if os-is-osx;
+    then ldapcmd-check-osx ldapadd
+    else ldapcmd-check ldapadd
+    fi
 }
 
 slappasswd-cmd() {
-    ldapcmd-check slappasswd
+    if os-is-osx;
+    then ldapcmd-check-osx slappasswd
+    else ldapcmd-check slappasswd
+    fi
 }
 
-ldap-modify-ldif() {
+ldap-ldif-add() {
     local _file=
-    local _server=
-    local _user_cn=
-    local _password=
+    local _socket=
     local _cmd=
     local _args=
     _file="${1:?}"
-    _server="${2:?}"
-    _user_cn="${3:?}"
-    _password="${4:?}"
+    _socket="${2:?}"
 
-    _args="$(ldapcmd-connection-arguments $_server $_user_cn $_password)"
-    _cmd="$(ldapmodify-cmd) ${_args} -f ${_file}"
+    _cmd="$(ldapmodify-cmd) ${_args} -Y EXTERNAL -H ${_socket} -f ${_file}"
 
     if file-exists $_file;
     then execute-string $_cmd
     else fail-loudly "[ldapmodify-ldif] Unable to apply LDIF ${_file} to ${_server}"
     fi
 
-}
-
-ldap-import-ldif() {
-    local _file=
-    local _server=
-    local _user_cn=
-    local _password=
-    local _cmd=
-    local _args=
-    _file="${1:?}"
-    _server="${2:?}"
-    _user_cn="${3:?}"
-    _password="${4:?}"
-
-    _args="$(ldapcmd-connection-arguments $_server $_user_cn $_password)"
-    _cmd="$(ldapadd-cmd) ${_args}"
-
-    if file-exists $_file;
-    then execute-string $_cmd
-    else fail-loudly "[ldap-import-ldif] Unable to apply LDIF ${_file} to ${_server}"
-    fi
-}
-
-ldapcmd-connection-arguments() {
-    local _server=
-    local _user_cn=
-    local _password=
-    local _server_args=
-    local _user_args=
-    _server="${1:?}"
-    _user_cn="${2:?}"
-    _password="${3:?}"
-
-    # Assemble Command Line Arguments
-    _server_args="-H ${_server}"
-    _user_args="-D '${_user_cn}' -w ${_password}"
-
-    echo "${_server_args} ${_user_args}"
 }
 
 slapd-server-test-password-ssha() {
@@ -202,41 +224,11 @@ slapd-server-test-password() {
 }
 
 slapd-server-test-rootdn() {
-    echo "cn=admin,cn=config"
+    echo "cn=admin,$(slapd-server-test-suffix)"
 }
 
 slapd-server-test-suffix() {
     echo "dc=example,dc=com"
-}
-
-slapd-server-test-setup-config() {
-    local _tmpdir=
-    local _template=
-    local _template_file=
-    local _destination=
-    local _ssl_dir=
-    local _ssl_ca_cert=
-    local _ssl_server_cert=
-    local _ssl_server_key=
-
-    _tmpdir="${1:?}"
-    _template=$(slapd-server-test-config-template)
-    _template_file=$(basename $_template)
-    _destination="${_tmpdir}/${_template_file}"
-    _ssl_dir="${_tmpdir}/.ssl"
-    _ssl_ca_cert="${_ssl_dir}/ca.crt"
-    _ssl_server_cert="${_ssl_dir}/server.crt"
-    _ssl_server_key="${_ssl_dir}/server.key"
-
-    recursive-copy $_template $_destination
-    replace-string "/tmp/slapd" $_tmpdir $_destination
-    echo-to-file "TLSCACertificateFile ${_ssl_ca_cert}" $_destination
-    echo-to-file "TLSCertificateFile ${_ssl_server_cert}" $_destination
-    echo-to-file "TLSCertificateKeyFile ${_ssl_server_key}" $_destination
-
-    if os-is-osx;
-    then replace-string "/etc/ldap" "/etc/openldap" $_destination
-    fi
 }
 
 slapd-server-test-config-template() {
@@ -248,24 +240,14 @@ slapd-error-cannot-find-cmd() {
     exit 1
 }
 
-ldap-client-test-setup-config() {
-    local _dir=
-    local _ssl_dir=
-    local _ssl_ca_cert=
-    _dir="${1:?}"
-    _ssl_dir="${_dir}/.ssl"
-    _ca_cert="${_ssl_dir}/ca.crt"
-
-    # echo-to-file "TLS_CACERT ${_ca_cert}" "${_dir}/.ldaprc"
-}
-
 ldap-error-cannot-find-ldif() {
     error "Cannot find LDIF file ${1:?}"
     exit 1
 }
 
 slapd-cmd-check-osx() {
-    slapd-cmd-check /usr/libexec
+    # slapd-cmd-check /usr/libexec
+    slapd-cmd-check /opt/boxen/homebrew/Cellar/openldap/2.4.43/libexec
 }
 
 slapd-cmd-check() {

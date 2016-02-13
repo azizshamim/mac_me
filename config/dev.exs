@@ -36,6 +36,10 @@ config :mac_me, :device_poller, MacMe.DevicePoller.FakeArpPing
 config :mac_me, :scanned_subnets, ['172.19.131.0/24']
 config :mac_me, :poll_interval, 10000
 
-config :mac_me, MacMe.Repo,
-  adapter: Sqlite.Ecto,
-  database: "local/mac_me_dev.sqlite3"
+config :mac_me, MacMe.LDAP,
+  hosts: ['127.0.0.1'],
+  port: 3890,
+  tls: true,
+  bind_dn: "cn=admin,dc=example,dc=com",
+  password: "test",
+  base_dn: "dc=example,dc=com"

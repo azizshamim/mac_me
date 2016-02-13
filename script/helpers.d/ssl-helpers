@@ -28,7 +28,6 @@ set -o pipefail
 # specify 'client_cn' to customize client certificate.
 bootstrap-test-ssl() {
     # User
-    local dir=
     local client_cn=
 
     # Internal
@@ -39,9 +38,8 @@ bootstrap-test-ssl() {
     local _ssl_server_req=
     local _ssl_server_key=
 
-    dir="${1:?}"
     client_cn="${2:-server}"
-    _ssl_dir="${dir}/.ssl"
+    _ssl_dir="${1:?}"
     _ssl_ca_cert="${_ssl_dir}/ca.crt"
     _ssl_ca_key="${_ssl_dir}/ca.key"
     _ssl_server_cert="${_ssl_dir}/server.crt"

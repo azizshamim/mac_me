@@ -1,0 +1,6 @@
+dn: cn=test-group,ou=Groups,dc=example,dc=com
+changetype: add
+objectClass: groupOfUniqueNames
+objectClass: top
+uniqueMember: cn=test-user,ou=People,dc=example,dc=com
+cn: test-group

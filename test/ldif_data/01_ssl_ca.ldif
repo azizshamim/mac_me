@@ -1,0 +1,10 @@
+dn: cn=config
+changetype: modify
+add: olcTLSCACertificateFile
+olcTLSCACertificateFile: /tmp/slapd/ca.crt
+-
+replace: olcTLSCertificateFile
+olcTLSCertificateFile: /tmp/slapd/server.crt
+-
+replace: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /tmp/slapd/server.key

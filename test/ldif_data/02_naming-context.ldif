@@ -1,0 +1,8 @@
+dn: dc=example,dc=com
+changetype: add
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: example.com
+dc: example
+description: example.com

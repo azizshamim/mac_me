@@ -18,17 +18,13 @@ defmodule MacMe.Web do
 
   def model do
     quote do
-      use Ecto.Model
+      # use Ecto.Model
     end
   end
 
   def controller do
     quote do
       use Phoenix.Controller
-
-      alias MacMe.Repo
-      import Ecto.Model
-      import Ecto.Query, only: [from: 1, from: 2]
 
       import MacMe.Router.Helpers
     end
@@ -58,11 +54,6 @@ defmodule MacMe.Web do
   def channel do
     quote do
       use Phoenix.Channel
-
-      alias MacMe.Repo
-      import Ecto.Model
-      import Ecto.Query, only: [from: 1, from: 2]
-
     end
   end
 
