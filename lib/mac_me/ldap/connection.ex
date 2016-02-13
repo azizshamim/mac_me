@@ -1,7 +1,4 @@
-require IEx
-
 defmodule MacMe.LDAP.Connection do
-  # Internal state module
   defmodule State do
     defstruct handle: nil, hosts: nil, port: nil, ssl: nil, bind_dn: nil, base_dn: nil
   end
