@@ -1,11 +1,10 @@
-require IEx
-
 defmodule MacMe.LDAP.ConnectionTest do
   use ExUnit.Case, async: false
   alias MacMe.LDAP.Connection
 
-  @random_user_name '#{Faker.Internet.user_name}'
-  @random_full_name '#{Faker.Name.first_name} #{Faker.Name.last_name}'
+  @random_name Faker.Internet.user_name
+  @random_user_name 'test-user-#{@random_name}'
+  @random_full_name 'Test User #{@random_name}'
 
   test "query data" do
     search_filter = :eldap.equalityMatch('cn', 'test-user')
@@ -29,7 +28,7 @@ defmodule MacMe.LDAP.ConnectionTest do
       {'cn', [@random_user_name]}
     ]
 
-    :ok == Connection.add(user, user_attributes)
+    :ok = Connection.add(user, user_attributes)
 
     search_filter = :eldap.equalityMatch('cn', @random_user_name)
     ldap_query = Connection.search(search_filter)
@@ -40,12 +39,12 @@ defmodule MacMe.LDAP.ConnectionTest do
 
   test "update a LDAP entry" do
     user = 'cn=#{@random_user_name},ou=People,dc=example,dc=com'
-    new_full_name = '#{Faker.Name.first_name} #{Faker.Name.last_name}'
+    new_full_name = '#{@random_full_name} -- update'
     changeset = [
       :eldap.mod_replace('sn', [new_full_name])
     ]
 
-    :ok == Connection.update(user, changeset)
+    update = :ok == Connection.update(user, changeset)
 
     search_filter = :eldap.equalityMatch('cn', @random_user_name)
     ldap_query = Connection.search(search_filter)
@@ -62,7 +61,7 @@ defmodule MacMe.LDAP.ConnectionTest do
   test "delete a user account" do
     user = 'cn=#{@random_user_name},ou=People,dc=example,dc=com'
 
-    :ok == Connection.delete(user)
+    :ok = Connection.delete(user)
 
     search_filter = :eldap.equalityMatch('cn', @random_user_name)
     ldap_query = Connection.search(search_filter)

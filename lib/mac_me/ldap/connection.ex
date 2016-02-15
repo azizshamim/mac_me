@@ -1,3 +1,5 @@
+require IEx
+
 defmodule MacMe.LDAP.Connection do
   defmodule State do
     defstruct handle: nil, hosts: nil, port: nil, ssl: nil, bind_dn: nil, base_dn: nil
@@ -17,14 +19,22 @@ defmodule MacMe.LDAP.Connection do
     GenServer.call(__MODULE__, {:search, filter})
   end
 
+  def search(dn, filter) when is_binary(dn), do: search(to_char_list(dn), filter)
+  def search(dn, filter) do
+    GenServer.call(__MODULE__, {:search, dn, filter})
+  end
+
+  def add(dn, attributes) when is_binary(dn), do: add(to_char_list(dn), attributes)
   def add(dn, attributes) do
     GenServer.call(__MODULE__, {:add, dn, attributes})
   end
 
+  def update(dn, attributes) when is_binary(dn), do: update(to_char_list(dn), attributes)
   def update(dn, attributes) do
     GenServer.call(__MODULE__, {:modify, dn, attributes})
   end
 
+  def delete(dn) when is_binary(dn), do: delete(to_char_list(dn))
   def delete(dn) do
     GenServer.call(__MODULE__, {:delete, dn})
   end
@@ -56,6 +66,20 @@ defmodule MacMe.LDAP.Connection do
     :ok == :eldap.add(state.handle, dn, attributes)
 
     {:reply, :ok, state}
+  end
+
+  def handle_call({:search, dn, filter}, _from, state) do
+
+    IEx.pry
+    {:ok, {:eldap_search_result, results, _}} =
+      :eldap.search(state.handle, [
+            {:scope, :eldap.baseObject},
+            {:base, dn},
+            {:filter, filter}
+          ])
+
+
+    {:reply, results, state}
   end
 
   def handle_call({:search, filter}, _from, state) do

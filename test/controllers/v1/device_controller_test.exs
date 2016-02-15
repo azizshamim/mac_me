@@ -1,7 +1,6 @@
 defmodule MacMe.V1.DeviceControllerTest do
   use MacMe.ConnCase
 
-  alias MacMe.Device
   @valid_attrs %{mac_address: "some content"}
   @invalid_attrs %{}
 

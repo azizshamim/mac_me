@@ -9,12 +9,11 @@ olcAccess: to *  by * write
 olcLastMod: TRUE
 olcRootDN: cn=admin,dc=example,dc=com
 olcRootPW: test
-olcDbCheckpoint: 512 30
 # olcDbConfig: set_cachesize 0 2097152 0
-olcDbConfig: set_cachesize 0 268435456 1
-olcDbConfig: set_lk_max_objects 1500
-olcDbConfig: set_lk_max_locks 1500
-olcDbConfig: set_lk_max_lockers 1500
-olcDbConfig: set_lg_regionmax 262144
-olcDbConfig: set_lg_bsize 2097152
-olcDbConfig: set_flags DB_LOG_AUTOREMOVE
+# olcDbConfig: set_cachesize 0 268435456 1
+# olcDbConfig: set_lk_max_objects 1500
+# olcDbConfig: set_lk_max_locks 1500
+# olcDbConfig: set_lk_max_lockers 1500
+# olcDbConfig: set_lg_regionmax 262144
+# olcDbConfig: set_lg_bsize 2097152
+# olcDbConfig: set_flags DB_LOG_AUTOREMOVE

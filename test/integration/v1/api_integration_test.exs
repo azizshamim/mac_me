@@ -3,9 +3,6 @@ require IEx
 defmodule MacMe.V1.ApiIntegrationTest do
   use ExUnit.Case
 
-  alias MacMe.Support.APICall
-  alias MacMe.Test.Support.Fixtures
-
   setup_all do
     MacMe.Test.Support.Helpers.launch_api
     :ok

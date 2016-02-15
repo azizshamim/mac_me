@@ -4,19 +4,20 @@ defmodule MacMe.Device do
   """
 
   alias MacMe.LDAP.Connection
+  alias MacMe.Device
   defstruct [:mac_address, :name]
 
   @mac_format ~r/([0-9A-F]{2}[:-]){5}([0-9A-F]{2})/
 
   def new(%{mac_address: mac_address, name: name}) do
-    %MacMe.Device{
+    %Device{
       mac_address: mac_address,
       name: name
     }
   end
 
   def new(%{mac_address: mac_address}) do
-    %MacMe.Device{mac_address: mac_address}
+    %Device{mac_address: mac_address}
   end
 
   def mac_address(device) do
@@ -35,16 +36,23 @@ defmodule MacMe.Device do
   end
 
   def save(device) do
-    if valid?(device) do
-      :ok
-    else
-      {:error, "Invalid MAC address"}
+    cond do
+      Device.valid?(device) -> Device.save_db(:add, device)
+      true -> {:error, "Invalid MAC address"}
     end
   end
 
-  def device_exists?(mac_address) do
-    case search_by({:mac_address, mac_address}) do
-      [] -> false
+  def save_db(:update, device) do
+    :ok
+  end
+
+  def save_db(:add, device) do
+    :ok
+  end
+
+  def exists?(mac_address) do
+    case Device.search_by({:mac_address, mac_address}) do
+      {:error, :noSuchObject} -> false
       true -> true
     end
   end
