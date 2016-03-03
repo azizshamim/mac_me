@@ -7,17 +7,6 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $DIR/helpers
 
-install_gems() {
-  bundle install --binstubs --path .bundle/gems
-}
-
-init() {
-  if [ "$(_has_ruby)" = "true" ]; then
-    install_gems
-  fi
-}
-
-init
 ### ADD USER DATA HERE ###
 mix deps.get
 mix deps.compile

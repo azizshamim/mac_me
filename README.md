@@ -1,15 +1,14 @@
 # Title of project
 
-Put a nice description here
+Track the mac addresses of network devices and associate them with people to track when people are in specific locations.
 
 ## Credits
 
-Who wrote this?
+* James Fryman
 
 ## Setup
 
-* What settings need to be set for deployment?
-* Are there system pre-requsites necessary?
+* `script/bootstrap`: Sets up the application for running. Installs deps. Requires: Elixir (install using `brew install elixir`)
 
 ## Deployment
 
