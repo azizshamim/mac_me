@@ -37,6 +37,7 @@ defmodule MacMe.Mixfile do
      {:exrm, "~> 0.18.1"},
      {:httpoison, "~> 0.7.4"},
      {:edeliver, ">= 1.1.1"},
+     {:vex, ">= 0.5.5"},
      {:dialyxir, github: "jeremyjh/dialyxir", only: [:dev, :test]},
      {:credo, "~> 0.2", only: [:dev, :test]},
      {:dogma, github: "lpil/dogma", only: [:dev, :test]},

@@ -22,6 +22,13 @@ defmodule MacMe.LDAP.Helper do
     Helper.add({type, dn}, attributes)
   end
 
+
+  def basename(dn, :type) when is_list(dn) do
+    dn
+    |> List.to_string
+    |> basename(:type)
+  end
+
   def basename(dn, :type) do
     dn
     |> Helper.base_dn
@@ -42,18 +49,9 @@ defmodule MacMe.LDAP.Helper do
     |> List.first
   end
 
-  def search(dn) do
-    type = Helper.basename(dn, :type) |> String.to_char_list
-    filter = [
-      :eldap.present(type)
-    ]
-
-    Connection.search(dn, filter)
-  end
-
   def exists?(dn) do
-    case Helper.search(dn) do
-      {:ok, :eldap_search_result, _} -> true
+    case Connection.search(dn) do
+      {:ok, results} -> true
       {:error, _} -> false
     end
   end

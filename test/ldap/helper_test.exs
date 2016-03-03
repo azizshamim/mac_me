@@ -1,6 +1,5 @@
 defmodule HelperTest do
   use ExUnit.Case, async: false
-  alias MacMe.LDAP.Connection
   alias MacMe.LDAP.Helper
 
   @fake_ou Faker.Internet.domain_word

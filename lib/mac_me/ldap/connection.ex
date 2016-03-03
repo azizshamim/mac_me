@@ -15,13 +15,9 @@ defmodule MacMe.LDAP.Connection do
     GenServer.start_link(__MODULE__, :ok, name: @name)
   end
 
-  def search(filter) do
-    GenServer.call(__MODULE__, {:search, filter})
-  end
-
-  def search(dn, filter) when is_binary(dn), do: search(to_char_list(dn), filter)
-  def search(dn, filter) do
-    GenServer.call(__MODULE__, {:search, dn, filter})
+  def search(dn) when is_binary(dn), do: search(to_char_list(dn))
+  def search(dn) do
+    GenServer.call(__MODULE__, {:search, dn})
   end
 
   def add(dn, attributes) when is_binary(dn), do: add(to_char_list(dn), attributes)
@@ -68,28 +64,21 @@ defmodule MacMe.LDAP.Connection do
     {:reply, :ok, state}
   end
 
-  def handle_call({:search, dn, filter}, _from, state) do
+  def handle_call({:search, dn}, _from, state) do
+    type = dn
+    |> MacMe.LDAP.Helper.basename(:type)
+    |> String.to_char_list
 
-    IEx.pry
-    {:ok, {:eldap_search_result, results, _}} =
-      :eldap.search(state.handle, [
-            {:scope, :eldap.baseObject},
-            {:base, dn},
-            {:filter, filter}
-          ])
+    search = :eldap.search(state.handle, [
+          {:scope, :eldap.baseObject},
+          {:filter, :eldap.present(type)},
+          {:base, dn},
+        ])
 
-
-    {:reply, results, state}
-  end
-
-  def handle_call({:search, filter}, _from, state) do
-    {:ok, {:eldap_search_result, results, _}} =
-      :eldap.search(state.handle, [
-            {:base, state.base_dn},
-            {:filter, filter}
-          ])
-
-    {:reply, results, state}
+    case search do
+      {:ok, {:eldap_search_result, results}}
+      =    -> {:reply, results, state}
+    end
   end
 
   def handle_call({:modify, dn, modify_op}, _from, state) do
